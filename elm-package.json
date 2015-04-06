@@ -1,0 +1,13 @@
+{
+    "version": "1.0.0",
+    "summary": "visual functional scientific workflow language compiling to Swift workflow lang",
+    "repository": "https://github.com/vilterp/thesis.git",
+    "license": "BSD3",
+    "source-directories": [
+        "."
+    ],
+    "exposed-modules": [],
+    "dependencies": {
+        "elm-lang/core": "1.1.1 <= v < 2.0.0"
+    }
+}
