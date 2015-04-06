@@ -1,6 +1,7 @@
 module GraphEditor.Model where
 
 import Diagrams.Geom (Point, Dims)
+import Diagrams.Core (Diagram)
 
 import Dict as D
 import Set
@@ -33,8 +34,9 @@ type PortState = ValidPort
                | TakenPort
                | NormalPort
 
--- TODO: abstract out diagram caching (...)
-type alias PosNode = { pos : Point, id : NodeId, node : Node }
+type alias PosNode = { pos : Point, id : NodeId, node : Node
+                     , cachedDiagram : Diagram Tag Action
+                     }
 
 -- TODO: more node types
 type Node = ApNode ApNodeAttrs
@@ -60,6 +62,8 @@ type DraggingState = DraggingNode { nodePath : NodePath, offset : Point } -- off
                    | DraggingEdge { fromPort : OutPortId, endPos : Point, upstreamNodes : Set.Set NodePath }
 
 type alias State = { graph : Graph, dragState : Maybe DraggingState }
+
+emptyState = { graph = emptyGraph, dragState = Nothing }
 
 -- tags
 

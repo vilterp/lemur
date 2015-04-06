@@ -3,6 +3,7 @@ module GraphEditor.Controller where
 import Debug
 
 import List as L
+import Dict as D
 
 import Diagrams.Interact (..)
 import Diagrams.Geom (..)
@@ -10,59 +11,27 @@ import Diagrams.Actions (..)
 
 import GraphEditor.Model (..)
 import GraphEditor.Util (..)
+import GraphEditor.View (..)
 
-posNodeActions nodePath dragState =
-    case dragState of
-      Nothing -> { emptyActionSet | mouseDown <- Just <| stopBubbling <|
-                                      \(MouseEvent evt) -> DragNodeStart { nodePath = nodePath, offset = evt.offset } }
-      _ -> emptyActionSet
+updateNodeViews : NodeDict -> State -> NodeDict
+updateNodeViews nodeDict state =
+    D.map (\id posNode -> { posNode | cachedDiagram <- viewNode posNode.node [] state }) nodeDict
 
-nodeXOutActions nodePath = { emptyActionSet | click <- Just <| keepBubbling <| always <| RemoveNode nodePath }
+updateGraphViews : Graph -> State -> Graph
+updateGraphViews graph state =
+    { graph | nodes <- updateNodeViews graph.nodes state }
 
-edgeXOutActions edge = { emptyActionSet | click <- Just <| stopBubbling <| always <| RemoveEdge edge }
-
-canvasActions nodePath dragState =
-    case dragState of
-      Nothing -> emptyActionSet
-      Just dragging ->
-          let moveAndUp = { emptyActionSet | mouseMove <- Just
-                                              <| stopBubbling <| \(MouseEvent evt) -> DragMove evt.offset
-                                           , mouseUp <- Just <| stopBubbling <| always DragEnd }
-          in case dragging of
-               DraggingNode attrs ->
-                  let a = Debug.watch "anp" attrs.nodePath
-                      b = Debug.watch "np" nodePath
-                  in if attrs.nodePath `directlyUnder` nodePath then moveAndUp else emptyActionSet
-               DraggingEdge attrs ->
-                  if nodePath == [] then moveAndUp else emptyActionSet
-
-directlyUnder xs ys = L.length xs - 1 == L.length ys
-
--- TODO: check state
-outPortActions : State -> OutPortId -> ActionSet Tag Action
-outPortActions state portId =
-    if outPortState state portId == NormalPort
-    then { emptyActionSet | mouseDown <- Just <| stopBubbling <|
-              \evt -> DragEdgeStart { fromPort = portId, endPos = collageMousePos evt } }
-    else emptyActionSet
-
-inPortActions : State -> InPortId -> ActionSet Tag Action
-inPortActions state portId =
-    let portState = inPortState state portId
-    in case state.dragState of
-         Just (DraggingEdge attrs) -> if portState == ValidPort
-                                      then { emptyActionSet | mouseUp <- Just <| stopBubbling
-                                                <| always <| AddEdge { from = attrs.fromPort, to = portId } }
-                                      else emptyActionSet
-         _ -> emptyActionSet
-
--- process 'em...
+updateStateViews : State -> State
+updateStateViews state =
+    { state | graph <- updateGraphViews state.graph state }
 
 update : UpdateFunc State Action
 update action state =
     case action of
-      DragNodeStart attrs -> { state | dragState <- Just <| DraggingNode attrs }
-      DragEdgeStart attrs -> { state | dragState <- Just <| DraggingEdge { attrs | upstreamNodes = upstreamNodes state.graph (fst attrs.fromPort) } }
+      DragNodeStart attrs -> updateStateViews { state | dragState <- Just <| DraggingNode attrs }
+      DragEdgeStart attrs -> updateStateViews
+                                { state | dragState <- Just <| DraggingEdge
+                                    { attrs | upstreamNodes = upstreamNodes state.graph (fst attrs.fromPort) } }
       DragMove mousePos ->
           case state.dragState of
             Just (DraggingNode attrs) ->
@@ -76,7 +45,7 @@ update action state =
                             Just <| DraggingEdge { attrs | endPos <- mousePos } }
             Nothing -> state
             _ -> state
-      DragEnd -> { state | dragState <- Nothing }
+      DragEnd -> updateStateViews { state | dragState <- Nothing }
       RemoveNode nodePath ->
           case removeNode state.graph nodePath of
             Ok newGraph -> { state | graph <- newGraph }
@@ -84,7 +53,7 @@ update action state =
       RemoveEdge edge -> { state | graph <- removeEdge edge state.graph }
       AddEdge edge ->
         case addEdge edge state.graph of
-          Ok newGraph -> { state | graph <- newGraph
-                                 , dragState <- Nothing }
+          Ok newGraph -> updateStateViews { state | graph <- newGraph
+                                                  , dragState <- Nothing }
           Err msg -> Debug.crash msg
       NoOp -> state

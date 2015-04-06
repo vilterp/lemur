@@ -22,7 +22,7 @@ import Diagrams.Debug (..)
 
 import GraphEditor.Model (..)
 import GraphEditor.Styles (..)
-import GraphEditor.Controller (..)
+import GraphEditor.Actions (..)
 import GraphEditor.Util (..)
 
 -- common elements
@@ -102,17 +102,18 @@ nodeDiagram nodePath state titleRow slotGroups color =
 viewPosNode : State -> NodePath -> PosNode -> Diagram Tag Action
 viewPosNode state pathAbove pn =
   let nodePath = pathAbove ++ [pn.id]
-  in viewNode pn.node nodePath state
+  in pn.cachedDiagram
       |> tagWithActions (NodeIdT pn.id) (posNodeActions nodePath state.dragState)
       |> move pn.pos
 
 viewNode : Node -> NodePath -> State -> Diagram Tag Action
-viewNode node nodePath state =
-    alignTop <| alignLeft <|
-      case node of
-        ApNode attrs -> viewApNode attrs nodePath state
-        IfNode -> viewIfNode nodePath state
-        LambdaNode attrs -> viewLambdaNode attrs nodePath state
+viewNode node nodePath state = let a = Debug.log "viewNode" 2
+                               in (alignTop <| alignLeft <|
+                                      case node of
+                                        ApNode attrs -> viewApNode attrs nodePath state
+                                        IfNode -> viewIfNode nodePath state
+                                        LambdaNode attrs -> viewLambdaNode attrs nodePath state)
+
 
 -- BUG: flickers when mouse gets inside of its own canvas. need to think this through.
 viewLambdaNode : LambdaNodeAttrs -> NodePath -> State -> Diagram Tag Action

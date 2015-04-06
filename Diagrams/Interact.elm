@@ -79,9 +79,7 @@ makeFoldUpdate updateF renderF =
             newModel = L.foldr updateF oldModel actions
             -- re-render
             oldDiagram = intState.diagram
-            newDiagram = if oldModel == newModel
-                         then oldDiagram
-                         else renderF newModel
+            newDiagram = renderF newModel
         in { mouseState = newMS
            , diagram = newDiagram
            , modelState = newModel

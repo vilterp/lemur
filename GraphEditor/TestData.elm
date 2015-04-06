@@ -1,6 +1,9 @@
 module GraphEditor.TestData where
 
+import Diagrams.Geom (Point)
+
 import GraphEditor.Model (..)
+import GraphEditor.View (..)
 
 import Dict as D
 import List as L
@@ -8,23 +11,26 @@ import Result as R
 
 import Debug
 
+makePosNode : { node : Node, pos : Point, id : String } -> PosNode
+makePosNode attrs = { attrs | cachedDiagram = viewNode attrs.node [attrs.id] emptyState }
+
 fooNode = ApNode { title = "Foo", params = ["InAasdfasdfsdafasdfs", "asdfs", "InB", "InC"], results = ["out1", "out2"] }
-fooPosNode = { node = fooNode, pos = (-300, 100), id = "foo" }
+fooPosNode = makePosNode { node = fooNode, pos = (-300, 100), id = "foo" }
 
 bazNode = ApNode { title = "Baz", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
-bazPosNode = { node = bazNode, pos = (100, -200), id = "baz" }
+bazPosNode = makePosNode { node = bazNode, pos = (100, -200), id = "baz" }
 
 barNode = ApNode { title = "Bar", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
-barPosNode = { node = barNode, pos = (100, 100), id = "bar" }
+barPosNode = makePosNode { node = barNode, pos = (100, 100), id = "bar" }
 
 fooBarEdge = { from = (["foo"], ApResultSlot "out1"), to = (["bar"], ApParamSlot "InA") }
 --fooBazEdge = { from = ("foo", "out2"), to = ("baz", "InC") }
 
 subBazNode = ApNode { title = "SubBaz", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
-subBazPosNode = { node = subBazNode, pos = (-50, -50), id = "baz1" }
+subBazPosNode = makePosNode { node = subBazNode, pos = (-50, -50), id = "baz1" }
 
 subBarNode = ApNode { title = "SubBar", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
-subBarPosNode = { node = subBarNode, pos = (50, 50), id = "bar1" }
+subBarPosNode = makePosNode { node = subBarNode, pos = (50, 50), id = "bar1" }
 
 subBarSubBazEdge = { from = (["lambda", "bar1"], ApResultSlot "out1"), to = (["lambda", "baz1"], ApParamSlot "InA") }
 
@@ -33,10 +39,10 @@ lambdaNode =
       { nodes = (D.fromList [ (subBarPosNode.id, subBarPosNode), (subBazPosNode.id, subBazPosNode) ])
       , dims = { width = 300, height = 200 }
       }
-lambdaPosNode = { node = lambdaNode, pos = (-450, -100), id = "lambda" }
+lambdaPosNode = makePosNode { node = lambdaNode, pos = (-450, -100), id = "lambda" }
 
 ifNode = IfNode
-ifPosNode = { id = "if1", node = ifNode, pos = (-200, 300) }
+ifPosNode = makePosNode { node = ifNode, pos = (-200, 300), id = "if1" }
 
 nodes = [fooPosNode, bazPosNode, barPosNode, ifPosNode, lambdaPosNode]
 edges = [fooBarEdge, subBarSubBazEdge]
