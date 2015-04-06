@@ -87,7 +87,10 @@ nestedPosNodeUpdate dict path updateFn =
           case D.get x dict of
             Just posNode ->
                 case posNode.node of
-                  LambdaNode {nodes, dims} -> nestedPosNodeUpdate nodes xs updateFn
+                  LambdaNode {nodes, dims} ->
+                      nestedPosNodeUpdate nodes xs updateFn
+                        |> R.map (\newNodes -> {posNode | node <- LambdaNode { nodes = newNodes, dims = dims }})
+                        |> R.map (\newLn -> D.update x (M.map (\_ -> newLn)) dict)
                   _ -> Err "invalid path: not a lambda node"
             Nothing -> Err "invalid path"
 

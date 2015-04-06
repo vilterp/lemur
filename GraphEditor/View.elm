@@ -121,7 +121,7 @@ viewLambdaNode node nodePath state =
         funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions state (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
         titleRow = flexCenter (nodeTitle "Lambda" Color.black nodePath) funcOutPort
-        nodes = showOrigin <| zcat <| L.map (viewPosNode state nodePath) <| D.values node.nodes
+        nodes = zcat <| L.map (viewPosNode state nodePath) <| D.values node.nodes
         subCanvas = centered <| tagWithActions Canvas (canvasActions state.dragState) <|
                       zcat [nodes, rect node.dims.width node.dims.height invisible]
     in background (fillAndStroke (C.Solid lambdaNodeBgColor) defaultStroke) <|
