@@ -23,6 +23,7 @@ import Diagrams.Debug (..)
 import GraphEditor.Model (..)
 import GraphEditor.Styles (..)
 import GraphEditor.Controller (..)
+import GraphEditor.Util (..)
 
 -- common elements
 xGlyph : Color.Color -> Maybe Color.Color -> Diagram Tag Action
@@ -122,7 +123,7 @@ viewLambdaNode node nodePath state =
                           <| portCirc funcOutPortColor
         titleRow = flexCenter (nodeTitle "Lambda" Color.black nodePath) funcOutPort
         nodes = zcat <| L.map (viewPosNode state nodePath) <| D.values node.nodes
-        subCanvas = centered <| tagWithActions Canvas (canvasActions state.dragState) <|
+        subCanvas = centered <| tagWithActions Canvas (canvasActions nodePath state.dragState) <|
                       zcat [nodes, rect node.dims.width node.dims.height invisible]
     in background (fillAndStroke (C.Solid lambdaNodeBgColor) defaultStroke) <|
           layout <| [titleRow, hrule nodeTopDivider 3, subCanvas]
@@ -203,10 +204,5 @@ viewGraph state =
         draggingEdge = case state.dragState of
                          Just (DraggingEdge attrs) -> [viewDraggingEdge attrs.fromPort nodes attrs.endPos]
                          _ -> []
-    in tagWithActions Canvas (canvasActions state.dragState) <| pad 10000 <| zcat <| draggingEdge ++ [edgeXOuts, edges, nodes]
+    in tagWithActions Canvas (canvasActions [] state.dragState) <| pad 10000 <| zcat <| draggingEdge ++ [edgeXOuts, edges, nodes]
 -- TODO: pad 10000 is jank
-
--- util
-
-intercalate : List a -> List (List a) -> List a
-intercalate sep xs = L.concat <| L.intersperse sep xs

@@ -2,11 +2,14 @@ module GraphEditor.Controller where
 
 import Debug
 
+import List as L
+
 import Diagrams.Interact (..)
 import Diagrams.Geom (..)
 import Diagrams.Actions (..)
 
 import GraphEditor.Model (..)
+import GraphEditor.Util (..)
 
 posNodeActions nodePath dragState =
     case dragState of
@@ -18,12 +21,22 @@ nodeXOutActions nodePath = { emptyActionSet | click <- Just <| keepBubbling <| a
 
 edgeXOutActions edge = { emptyActionSet | click <- Just <| stopBubbling <| always <| RemoveEdge edge }
 
-canvasActions dragState =
-    let dragMove = { emptyActionSet | mouseMove <- Just <| stopBubbling <| \(MouseEvent evt) -> DragMove evt.offset
-                                    , mouseUp <- Just <| stopBubbling <| always DragEnd }
-    in case dragState of
-         Nothing -> emptyActionSet
-         _ -> dragMove
+canvasActions nodePath dragState =
+    case dragState of
+      Nothing -> emptyActionSet
+      Just dragging ->
+          let moveAndUp = { emptyActionSet | mouseMove <- Just
+                                              <| stopBubbling <| \(MouseEvent evt) -> DragMove evt.offset
+                                           , mouseUp <- Just <| stopBubbling <| always DragEnd }
+          in case dragging of
+               DraggingNode attrs ->
+                  let a = Debug.watch "anp" attrs.nodePath
+                      b = Debug.watch "np" nodePath
+                  in if attrs.nodePath `directlyUnder` nodePath then moveAndUp else emptyActionSet
+               DraggingEdge attrs ->
+                  if nodePath == [] then moveAndUp else emptyActionSet
+
+directlyUnder xs ys = L.length xs - 1 == L.length ys
 
 -- TODO: check state
 outPortActions : State -> OutPortId -> ActionSet Tag Action
