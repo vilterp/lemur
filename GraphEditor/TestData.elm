@@ -28,8 +28,12 @@ subBarPosNode = { node = subBarNode, pos = (50, 50), id = "bar1" }
 
 subBarSubBazEdge = { from = (["lambda", "bar1"], ApResultSlot "out1"), to = (["lambda", "baz1"], ApParamSlot "InA") }
 
-lambdaNode = LambdaNode <| D.fromList [ (subBarPosNode.id, subBarPosNode) , (subBazPosNode.id, subBazPosNode) ]
-lambdaPosNode = { node = lambdaNode, pos = (300, -200), id = "lambda" }
+lambdaNode =
+    LambdaNode
+      { nodes = (D.fromList [ (subBarPosNode.id, subBarPosNode), (subBazPosNode.id, subBazPosNode) ])
+      , dims = { width = 300, height = 200 }
+      }
+lambdaPosNode = { node = lambdaNode, pos = (-450, -100), id = "lambda" }
 
 ifNode = IfNode
 ifPosNode = { id = "if1", node = ifNode, pos = (-200, 300) }

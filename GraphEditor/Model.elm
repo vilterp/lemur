@@ -1,6 +1,6 @@
 module GraphEditor.Model where
 
-import Diagrams.Geom (Point)
+import Diagrams.Geom (Point, Dims)
 
 import Dict as D
 import List as L
@@ -36,10 +36,11 @@ type alias PosNode = { pos : Point, id : NodeId, node : Node }
 -- TODO: more node types
 type Node = ApNode ApNodeAttrs
           | IfNode
-          | LambdaNode NodeDict
+          | LambdaNode LambdaNodeAttrs
 
 -- TODO: this attrs thing is awkward
 type alias ApNodeAttrs = { title : String, params : List String, results : List String }
+type alias LambdaNodeAttrs = { nodes : NodeDict, dims : Dims }
 
 type alias Edge = { from : OutPortId, to : InPortId }
 
@@ -86,7 +87,7 @@ nestedPosNodeUpdate dict path updateFn =
           case D.get x dict of
             Just posNode ->
                 case posNode.node of
-                  LambdaNode subDict -> nestedPosNodeUpdate subDict xs updateFn
+                  LambdaNode {nodes, dims} -> nestedPosNodeUpdate nodes xs updateFn
                   _ -> Err "invalid path: not a lambda node"
             Nothing -> Err "invalid path"
 

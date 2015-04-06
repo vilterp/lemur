@@ -46,6 +46,10 @@ portStateColorCode st = case st of
                           NormalPort -> normalPortColor
                           TakenPort -> normalPortColor
 
+lambdaNodeBgColor = Color.RGBA 220 255 255 1 -- cyan
+apNodeBgColor = Color.lightBlue
+ifNodeBgColor = Color.lightPurple
+
 -- actions
 
 posNodeActions nodePath dragState =
@@ -95,7 +99,7 @@ xGlyph lineColor bgColor =
       bg = circle 7 <| justFill <| C.Solid actualBgColor
   in zcat [rotLeft, rotRight, bg]
 
-nodeXGlyph = xGlyph Color.white Nothing
+nodeXGlyph c = xGlyph c Nothing
 edgeXGlyph bgC = xGlyph Color.black <| Just bgC
 
 -- TODO: color code based on state
@@ -134,10 +138,10 @@ outSlot state (nodePath, slotId) =
                             <| portCirc stateColor
                         ]
 
-nodeTitle : String -> NodePath -> Diagram Tag Action
-nodeTitle name nodePath =
+nodeTitle : String -> Color.Color -> NodePath -> Diagram Tag Action
+nodeTitle name color nodePath =
     let title = text name titleStyle
-        xOut = tagWithActions XOut (nodeXOutActions nodePath) <| nodeXGlyph
+        xOut = tagWithActions XOut (nodeXOutActions nodePath) <| nodeXGlyph color
     in hcat <| [ xOut
                , hspace 5
                , title
@@ -168,10 +172,23 @@ viewPosNode state pathAbove pn =
 
 viewNode : Node -> NodePath -> State -> Diagram Tag Action
 viewNode node nodePath state =
-    case node of
-      ApNode attrs -> viewApNode attrs nodePath state
-      IfNode -> viewIfNode nodePath state
-      LambdaNode _ -> empty
+    alignTop <| alignLeft <|
+      case node of
+        ApNode attrs -> viewApNode attrs nodePath state
+        IfNode -> viewIfNode nodePath state
+        LambdaNode attrs -> viewLambdaNode attrs nodePath state
+
+viewLambdaNode : LambdaNodeAttrs -> NodePath -> State -> Diagram Tag Action
+viewLambdaNode node nodePath state =
+    let -- TODO: this is same as viewApNode; factor out
+        funcOutPortColor = portStateColorCode <| outPortState state (nodePath, FuncValueSlot)
+        funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions state (nodePath, FuncValueSlot))
+                          <| portCirc funcOutPortColor
+        titleRow = flexCenter (nodeTitle "Lambda" Color.black nodePath) funcOutPort
+        nodes = zcat <| L.map (viewPosNode state nodePath) <| D.values node.nodes
+        subCanvas = centered <| zcat [nodes, rect node.dims.width node.dims.height invisible]
+    in background (fillAndStroke (C.Solid lambdaNodeBgColor) defaultStroke) <|
+          layout <| [titleRow, hrule nodeTopDivider 3, subCanvas]
 
 -- TODO: padding is awkward
 viewApNode : ApNodeAttrs -> NodePath -> State -> Diagram Tag Action
@@ -179,17 +196,17 @@ viewApNode node nodePath state =
     let funcOutPortColor = portStateColorCode <| outPortState state (nodePath, FuncValueSlot)
         funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions state (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
-        titleRow = flexCenter (nodeTitle node.title nodePath) funcOutPort
+        titleRow = flexCenter (nodeTitle node.title Color.white nodePath) funcOutPort
         params = InputGroup <| L.map ApParamSlot node.params
         results = OutputGroup <| L.map ApResultSlot node.results
-    in nodeDiagram nodePath state titleRow [params, results] Color.lightBlue -- TODO: lighter
+    in nodeDiagram nodePath state titleRow [params, results] apNodeBgColor -- TODO: lighter
 
 viewIfNode : NodePath -> State -> Diagram Tag Action
 viewIfNode nodePath state =
-    let titleRow = flexRight (nodeTitle "If" nodePath)
+    let titleRow = flexRight (nodeTitle "If" Color.white nodePath)
         inSlots = InputGroup [IfCondSlot, IfTrueSlot, IfFalseSlot]
         outSlots = OutputGroup [IfResultSlot]
-    in nodeDiagram nodePath state titleRow [inSlots, outSlots] Color.lightPurple
+    in nodeDiagram nodePath state titleRow [inSlots, outSlots] ifNodeBgColor
 
 --viewLambdaNode : ...
 
