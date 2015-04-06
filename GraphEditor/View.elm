@@ -22,7 +22,7 @@ import Diagrams.Debug (..)
 
 import GraphEditor.Model (..)
 import GraphEditor.Styles (..)
-import GraphEditor.Actions (..)
+import GraphEditor.Controller (..)
 
 -- common elements
 xGlyph : Color.Color -> Maybe Color.Color -> Diagram Tag Action
