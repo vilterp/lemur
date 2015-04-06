@@ -62,7 +62,7 @@ update : UpdateFunc State Action
 update action state =
     case action of
       DragNodeStart attrs -> { state | dragState <- Just <| DraggingNode attrs }
-      DragEdgeStart attrs -> { state | dragState <- Just <| DraggingEdge attrs }
+      DragEdgeStart attrs -> { state | dragState <- Just <| DraggingEdge { attrs | upstreamNodes = upstreamNodes state.graph (fst attrs.fromPort) } }
       DragMove mousePos ->
           case state.dragState of
             Just (DraggingNode attrs) ->

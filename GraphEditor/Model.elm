@@ -3,10 +3,13 @@ module GraphEditor.Model where
 import Diagrams.Geom (Point, Dims)
 
 import Dict as D
+import Set
 import List as L
 import Result as R
 import Maybe as M
 import Debug
+
+import GraphEditor.Util (..)
 
 -- data structures
 
@@ -54,7 +57,7 @@ emptyGraph = { nodes = D.empty, edges = [] }
 -- app state
 
 type DraggingState = DraggingNode { nodePath : NodePath, offset : Point } -- offset at lowest level
-                   | DraggingEdge { fromPort : OutPortId, endPos : Point }
+                   | DraggingEdge { fromPort : OutPortId, endPos : Point, upstreamNodes : Set.Set NodePath }
 
 type alias State = { graph : Graph, dragState : Maybe DraggingState }
 
@@ -137,6 +140,7 @@ inPortState state (nodePath, slotId) =
                                               | fromNodePath == nodePath -> InvalidPort
                                               -- this node already taken
                                               | inPortTaken state.graph (nodePath, slotId) -> TakenPort
+                                              | nodePath `Set.member` attrs.upstreamNodes -> InvalidPort
                                               -- TODO: wrong type!
                                               | otherwise -> ValidPort
 
@@ -164,3 +168,18 @@ anyNormalPortsUsed state nodePath =
     not <| L.isEmpty <|
       L.filter (\{from, to} -> (fst from == nodePath && snd from /= FuncValueSlot) || (fst to == nodePath))
                state.graph.edges
+
+-- TODO: use these in other queries
+edgesFrom : Graph -> NodePath -> List Edge
+edgesFrom graph nodePath =
+    L.filter (\{from, to} -> fst from == nodePath) graph.edges
+
+edgesTo : Graph -> NodePath -> List Edge
+edgesTo graph nodePath =
+    L.filter (\{from, to} -> fst to == nodePath) graph.edges
+
+upstreamNodes : Graph -> NodePath -> Set.Set NodePath
+upstreamNodes graph nodePath =
+    let ofThisNode = L.map (fst << .from) (edgesTo graph nodePath)
+        ofNodesOneUpstream = L.map (upstreamNodes graph) ofThisNode
+    in multiUnion <| (Set.fromList ofThisNode) :: ofNodesOneUpstream
