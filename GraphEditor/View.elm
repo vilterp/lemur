@@ -37,7 +37,14 @@ defLine = C.defaultLine
 nodeTopDivider = defLine
 nodeMiddleDivider = { defLine | dashing <- [5, 5] }
 
-portColor = Color.yellow
+normalPortColor = Color.yellow
+
+portStateColorCode : PortState -> Color.Color
+portStateColorCode st = case st of
+                          ValidPort -> Color.lightGreen
+                          InvalidPort -> Color.grey
+                          NormalPort -> normalPortColor
+                          TakenPort -> normalPortColor
 
 -- actions
 
@@ -58,12 +65,16 @@ canvasActions dragState =
          Nothing -> emptyActionSet
          _ -> dragMove
 
-outPortActions : OutPortId -> ActionSet Tag Action
-outPortActions portId = { emptyActionSet | mouseDown <- Just <| stopBubbling <|
-                                              \evt -> DragEdgeStart { fromPort = portId, endPos = collageMousePos evt } }
+-- TODO: check state
+outPortActions : State -> OutPortId -> ActionSet Tag Action
+outPortActions state portId =
+    if outPortState state portId == NormalPort
+    then { emptyActionSet | mouseDown <- Just <| stopBubbling <|
+              \evt -> DragEdgeStart { fromPort = portId, endPos = collageMousePos evt } }
+    else emptyActionSet
 
-inPortActions : InPortId -> State -> ActionSet Tag Action
-inPortActions portId state =
+inPortActions : State -> InPortId -> ActionSet Tag Action
+inPortActions state portId =
     let portState = inPortState state portId
     in case state.dragState of
          Just (DraggingEdge attrs) -> if portState == ValidPort
@@ -71,16 +82,6 @@ inPortActions portId state =
                                                 <| always <| AddEdge { from = attrs.fromPort, to = portId } }
                                       else emptyActionSet
          _ -> emptyActionSet
-
--- TODO: don't forget about ports that are taken
-portStateColorCode : PortState -> Color.Color
-portStateColorCode st = case st of
-                          ValidPort -> Color.lightGreen
-                          InvalidPort -> Color.yellow
-                          NormalPort -> Color.yellow
-                          TakenPort -> takenColor
-
-takenColor = Color.lightGreen
 
 -- views
 
@@ -111,7 +112,7 @@ inSlotLabel sid =
 inSlot : State -> InPortId -> LayoutRow Tag Action
 inSlot state (nodePath, slotId) =
     let stateColor = portStateColorCode <| inPortState state (nodePath, slotId)
-    in flexRight <| hcat [ tagWithActions (InPortT slotId) (inPortActions (nodePath, slotId) state)
+    in flexRight <| hcat [ tagWithActions (InPortT slotId) (inPortActions state (nodePath, slotId))
                               <| portCirc stateColor
                          , hspace 5
                          , text (inSlotLabel slotId) slotLabelStyle
@@ -129,7 +130,7 @@ outSlot state (nodePath, slotId) =
     let stateColor = portStateColorCode <| outPortState state (nodePath, slotId)
     in flexLeft <| hcat [ text (outSlotLabel slotId) slotLabelStyle
                         , hspace 5
-                        , tagWithActions (OutPortT slotId) (outPortActions (nodePath, slotId))
+                        , tagWithActions (OutPortT slotId) (outPortActions state (nodePath, slotId))
                             <| portCirc stateColor
                         ]
 
@@ -176,7 +177,7 @@ viewNode node nodePath state =
 viewApNode : ApNodeAttrs -> NodePath -> State -> Diagram Tag Action
 viewApNode node nodePath state =
     let funcOutPortColor = portStateColorCode <| outPortState state (nodePath, FuncValueSlot)
-        funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions (nodePath, FuncValueSlot))
+        funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions state (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
         titleRow = flexCenter (nodeTitle node.title nodePath) funcOutPort
         params = InputGroup <| L.map ApParamSlot node.params
@@ -238,7 +239,7 @@ getEdgeCoords nodesDia edg =
 viewEdgeXOut : Diagram Tag Action -> Edge -> Diagram Tag Action
 viewEdgeXOut nodesDia edge =
   let edgeCoords = getEdgeCoords nodesDia edge
-  in tagWithActions XOut (edgeXOutActions edge) <| move edgeCoords.to <| edgeXGlyph takenColor
+  in tagWithActions XOut (edgeXOutActions edge) <| move edgeCoords.to <| edgeXGlyph normalPortColor
 
 viewGraph : State -> Diagram Tag Action
 viewGraph state = 

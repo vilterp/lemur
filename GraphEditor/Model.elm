@@ -123,17 +123,40 @@ inPortTaken g inPort = L.any (\{from, to} -> to == inPort) g.edges
 -- TODO(perf): these are same for duration of drag. could save somewhere.
 inPortState : State -> InPortId -> PortState
 inPortState state (nodePath, slotId) =
-    case state.dragState of
-      Nothing -> NormalPort
-      Just (DraggingNode _) -> NormalPort
-      Just (DraggingEdge attrs) -> let (fromNodePath, _) = attrs.fromPort
-                                   in if -- dragging from this node
-                                         | fromNodePath == nodePath -> InvalidPort
-                                         -- this node already taken
-                                         | inPortTaken state.graph (nodePath, slotId) -> TakenPort
-                                         -- TODO: wrong type!
-                                         | otherwise -> ValidPort
+    if funcOutPortUsed state nodePath
+    then InvalidPort
+    else case state.dragState of
+           Nothing -> NormalPort
+           Just (DraggingNode _) -> NormalPort
+           Just (DraggingEdge attrs) -> let (fromNodePath, _) = attrs.fromPort
+                                        in if -- dragging from this node
+                                              | fromNodePath == nodePath -> InvalidPort
+                                              -- this node already taken
+                                              | inPortTaken state.graph (nodePath, slotId) -> TakenPort
+                                              -- TODO: wrong type!
+                                              | otherwise -> ValidPort
 
 -- TODO: highlight as valid when you mouse over an in port of same type
 outPortState : State -> OutPortId -> PortState
-outPortState _ _ = NormalPort
+outPortState state (nodePath, slotId) =
+    if | funcOutPortUsed state nodePath ->
+            case slotId of
+              FuncValueSlot -> NormalPort
+              _ -> InvalidPort
+       | anyNormalPortsUsed state nodePath ->
+            case slotId of
+              FuncValueSlot -> InvalidPort
+              _ -> NormalPort
+       | otherwise -> NormalPort
+
+funcOutPortUsed : State -> NodePath -> Bool
+funcOutPortUsed state nodePath =
+    not <| L.isEmpty <|
+      L.filter (\{from, to} -> fst from == nodePath && snd from == FuncValueSlot)
+               state.graph.edges
+
+anyNormalPortsUsed : State -> NodePath -> Bool
+anyNormalPortsUsed state nodePath =
+    not <| L.isEmpty <|
+      L.filter (\{from, to} -> (fst from == nodePath && snd from /= FuncValueSlot) || (fst to == nodePath))
+               state.graph.edges
