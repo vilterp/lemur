@@ -39,7 +39,7 @@ ifNode = IfNode
 ifPosNode = { id = "if1", node = ifNode, pos = (-200, 300) }
 
 nodes = [fooPosNode, bazPosNode, barPosNode, ifPosNode, lambdaPosNode]
-edges = [fooBarEdge]
+edges = [fooBarEdge, subBarSubBazEdge]
 
 initGraph : Graph
 initGraph = let withNodes : Result String Graph

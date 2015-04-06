@@ -40,10 +40,10 @@ type alias MouseState t a =
     { isDown : Bool
     , overPath : PickPath t a
     , overTags : List t
-    , pickPathOnMouseDown : Maybe (List t)
+    , tagPathOnMouseDown : Maybe (List t)
     }
 
-initMouseState = { isDown = False, overPath = [], overTags = [], pickPathOnMouseDown = Nothing }
+initMouseState = { isDown = False, overPath = [], overTags = [], tagPathOnMouseDown = Nothing }
 
 type alias InteractionState m t a =
     { mouseState : MouseState t a
@@ -72,7 +72,8 @@ makeFoldUpdate : UpdateFunc m a -> RenderFunc m t a -> InteractUpdateFunc m t a
 makeFoldUpdate updateF renderF =
     \(loc, evt) intState ->
         let (newMS, actions) = processMouseEvent intState.diagram intState.mouseState evt
-            --actions = Debug.watch "actions" actions
+            a = Debug.watch "actions" actions
+            b = Debug.watch "mouseState" <| L.map .tag newMS.overPath
             -- new model
             oldModel = intState.modelState
             newModel = L.foldr updateF oldModel actions
@@ -83,7 +84,7 @@ makeFoldUpdate updateF renderF =
                          else renderF newModel
         in { mouseState = newMS
            , diagram = newDiagram
-           , modelState = Debug.watch "state" newModel
+           , modelState = newModel
            }
 
 initInteractState : RenderFunc m t a -> m -> InteractionState m t a
@@ -105,21 +106,21 @@ processMouseEvent diagram mouseState (evt, mousePos) =
     in case evt of
          MouseDownEvt -> let actions = L.filterMap (getOffsetAndMember .mouseDown) overPath
                          in ( { mouseState | isDown <- True
-                                           , pickPathOnMouseDown <- Just <| L.map .tag overPath }
+                                           , tagPathOnMouseDown <- Just <| L.map .tag overPath }
                             , applyActions overPath actions
                             )
          MouseUpEvt -> let overTags = L.map .tag overPath
                            mouseUps = L.filterMap (getOffsetAndMember .mouseUp) overPath
                            --a = Debug.log "---------------" ()
                            --b = Debug.log "op:" overPath
-                           --c = Debug.log "ppomd:" mouseState.pickPathOnMouseDown
+                           --c = Debug.log "ppomd:" mouseState.tagPathOnMouseDown
                            --d = Debug.log "match" (b == (M.withDefault [] c))
                            -- TODO: filter for ones that have same pick path on mouse down as now (?)
-                           clicks = if L.map .tag overPath == M.withDefault [] mouseState.pickPathOnMouseDown
+                           clicks = if L.map .tag overPath == M.withDefault [] mouseState.tagPathOnMouseDown
                                     then L.filterMap (getOffsetAndMember .click) overPath
                                     else []
                        in ( { mouseState | isDown <- False
-                                         , pickPathOnMouseDown <- Nothing }
+                                         , tagPathOnMouseDown <- Nothing }
                           , applyActions overPath <| clicks ++ mouseUps
                           )
          MouseMoveEvt -> let oldOverPath = mouseState.overPath

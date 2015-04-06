@@ -21,73 +21,8 @@ import Diagrams.Query (..)
 import Diagrams.Debug (..)
 
 import GraphEditor.Model (..)
-
--- Styles (TODO: factor into own module?)
-
-defaultTextStyle = T.defaultStyle
-titleStyle = { defaultTextStyle | bold <- True }
-slotLabelStyle = defaultTextStyle
-
-defaultLineStyle = C.defaultLine
-
-edgeStyle = { defaultLineStyle | width <- 3 }
-
-defLine = C.defaultLine
-
-nodeTopDivider = defLine
-nodeMiddleDivider = { defLine | dashing <- [5, 5] }
-
-normalPortColor = Color.yellow
-
-portStateColorCode : PortState -> Color.Color
-portStateColorCode st = case st of
-                          ValidPort -> Color.lightGreen
-                          InvalidPort -> Color.grey
-                          NormalPort -> normalPortColor
-                          TakenPort -> normalPortColor
-
-lambdaNodeBgColor = Color.RGBA 220 255 255 1 -- cyan
-apNodeBgColor = Color.lightBlue
-ifNodeBgColor = Color.lightPurple
-
--- actions
-
-posNodeActions nodePath dragState =
-    case dragState of
-      Nothing -> { emptyActionSet | mouseDown <- Just <| stopBubbling <|
-                                      \(MouseEvent evt) -> DragNodeStart { nodePath = nodePath, offset = evt.offset } }
-      _ -> emptyActionSet
-
-nodeXOutActions nodePath = { emptyActionSet | click <- Just <| keepBubbling <| always <| RemoveNode nodePath }
-
-edgeXOutActions edge = { emptyActionSet | click <- Just <| stopBubbling <| always <| RemoveEdge edge }
-
-canvasActions dragState =
-    let dragMove = { emptyActionSet | mouseMove <- Just <| stopBubbling <| \(MouseEvent evt) -> DragMove evt.offset
-                                    , mouseUp <- Just <| stopBubbling <| always DragEnd }
-    in case dragState of
-         Nothing -> emptyActionSet
-         _ -> dragMove
-
--- TODO: check state
-outPortActions : State -> OutPortId -> ActionSet Tag Action
-outPortActions state portId =
-    if outPortState state portId == NormalPort
-    then { emptyActionSet | mouseDown <- Just <| stopBubbling <|
-              \evt -> DragEdgeStart { fromPort = portId, endPos = collageMousePos evt } }
-    else emptyActionSet
-
-inPortActions : State -> InPortId -> ActionSet Tag Action
-inPortActions state portId =
-    let portState = inPortState state portId
-    in case state.dragState of
-         Just (DraggingEdge attrs) -> if portState == ValidPort
-                                      then { emptyActionSet | mouseUp <- Just <| stopBubbling
-                                                <| always <| AddEdge { from = attrs.fromPort, to = portId } }
-                                      else emptyActionSet
-         _ -> emptyActionSet
-
--- views
+import GraphEditor.Styles (..)
+import GraphEditor.Actions (..)
 
 -- common elements
 xGlyph : Color.Color -> Maybe Color.Color -> Diagram Tag Action
@@ -178,6 +113,7 @@ viewNode node nodePath state =
         IfNode -> viewIfNode nodePath state
         LambdaNode attrs -> viewLambdaNode attrs nodePath state
 
+-- BUG: flickers when mouse gets inside of its own canvas. need to think this through.
 viewLambdaNode : LambdaNodeAttrs -> NodePath -> State -> Diagram Tag Action
 viewLambdaNode node nodePath state =
     let -- TODO: this is same as viewApNode; factor out
@@ -185,8 +121,9 @@ viewLambdaNode node nodePath state =
         funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions state (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
         titleRow = flexCenter (nodeTitle "Lambda" Color.black nodePath) funcOutPort
-        nodes = zcat <| L.map (viewPosNode state nodePath) <| D.values node.nodes
-        subCanvas = centered <| zcat [nodes, rect node.dims.width node.dims.height invisible]
+        nodes = showOrigin <| zcat <| L.map (viewPosNode state nodePath) <| D.values node.nodes
+        subCanvas = centered <| tagWithActions Canvas (canvasActions state.dragState) <|
+                      zcat [nodes, rect node.dims.width node.dims.height invisible]
     in background (fillAndStroke (C.Solid lambdaNodeBgColor) defaultStroke) <|
           layout <| [titleRow, hrule nodeTopDivider 3, subCanvas]
 
@@ -234,7 +171,7 @@ viewDraggingEdge outPort nodesDia mousePos =
 getOutPortCoords : Diagram Tag Action -> OutPortId -> Point
 getOutPortCoords nodesDia outPort =
     let (nodePath, slotId) = outPort
-        tagPath = L.map NodeIdT nodePath
+        tagPath = (L.intersperse Canvas <| L.map NodeIdT nodePath)
     in case getCoords nodesDia (tagPath ++ [OutPortT slotId]) of
          Just pt -> pt
          Nothing -> Debug.crash ("path not found: " ++ (toString nodePath))
@@ -242,7 +179,7 @@ getOutPortCoords nodesDia outPort =
 getInPortCoords : Diagram Tag Action -> InPortId -> Point
 getInPortCoords nodesDia outPort =
    let (nodePath, slotId) = outPort
-       tagPath = L.map NodeIdT nodePath
+       tagPath = (L.intersperse Canvas <| L.map NodeIdT nodePath)
    in case getCoords nodesDia (tagPath ++ [InPortT slotId]) of
         Just pt -> pt
         Nothing -> Debug.crash ("path not found: " ++ (toString nodePath))
