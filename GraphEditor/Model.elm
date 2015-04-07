@@ -58,8 +58,11 @@ emptyGraph = { nodes = D.empty, edges = [] }
 
 type DraggingState = DraggingNode { nodePath : NodePath, offset : Point } -- offset at lowest level
                    | DraggingEdge { fromPort : OutPortId, endPos : Point, upstreamNodes : Set.Set NodePath }
+                   | Panning { offset : Point }
 
-type alias State = { graph : Graph, dragState : Maybe DraggingState }
+type alias State = { graph : Graph, dragState : Maybe DraggingState, pan : Point }
+
+emptyState = { graph = emptyGraph, dragState = Nothing, pan = (0, 0) }
 
 -- tags
 
@@ -72,6 +75,7 @@ type Tag = NodeIdT NodeId
 
 type Action = DragNodeStart { nodePath : NodePath, offset : Point }
             | DragEdgeStart { fromPort : OutPortId, endPos : Point }
+            | PanStart { offset : Point }
             | DragMove Point
             | DragEnd
             | RemoveNode NodePath
@@ -133,8 +137,6 @@ inPortState state (nodePath, slotId) =
     if funcOutPortUsed state nodePath
     then InvalidPort
     else case state.dragState of
-           Nothing -> NormalPort
-           Just (DraggingNode _) -> NormalPort
            Just (DraggingEdge attrs) -> let (fromNodePath, _) = attrs.fromPort
                                         in if -- dragging from this node
                                               | fromNodePath == nodePath -> InvalidPort
@@ -146,6 +148,7 @@ inPortState state (nodePath, slotId) =
                                               | goingUpTree fromNodePath nodePath -> InvalidPort
                                               -- TODO: wrong type!
                                               | otherwise -> ValidPort
+           _ -> NormalPort
 
 -- TODO: highlight as valid when you mouse over an in port of same type
 outPortState : State -> OutPortId -> PortState

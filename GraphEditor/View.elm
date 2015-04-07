@@ -204,5 +204,11 @@ viewGraph state =
         draggingEdge = case state.dragState of
                          Just (DraggingEdge attrs) -> [viewDraggingEdge attrs.fromPort nodes attrs.endPos]
                          _ -> []
-    in tagWithActions Canvas (canvasActions [] state.dragState) <| pad 10000 <| zcat <| draggingEdge ++ [edgeXOuts, edges, nodes]
+    in draggingEdge ++ [edgeXOuts, edges, nodes]
+        |> zcat
+        |> showOrigin
+        |> pad 10000
+        |> tagWithActions Canvas (canvasActions [] state.dragState)
+        |> move state.pan
+
 -- TODO: pad 10000 is jank

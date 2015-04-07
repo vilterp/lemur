@@ -23,16 +23,20 @@ edgeXOutActions edge = { emptyActionSet | click <- Just <| stopBubbling <| alway
 
 canvasActions nodePath dragState =
     case dragState of
-      Nothing -> emptyActionSet
+      Nothing -> { emptyActionSet | mouseDown <- Just
+                      <| stopBubbling <| \(MouseEvent evt) -> PanStart { offset = evt.offset } }
       Just dragging ->
           let moveAndUp = { emptyActionSet | mouseMove <- Just
                                               <| stopBubbling <| \(MouseEvent evt) -> DragMove evt.offset
                                            , mouseUp <- Just <| stopBubbling <| always DragEnd }
           in case dragging of
-               DraggingNode attrs ->
-                  if attrs.nodePath `directlyUnder` nodePath then moveAndUp else emptyActionSet
-               DraggingEdge attrs ->
-                  if nodePath == [] then moveAndUp else emptyActionSet
+                DraggingNode attrs ->
+                    if attrs.nodePath `directlyUnder` nodePath then moveAndUp else emptyActionSet
+                DraggingEdge attrs ->
+                    if nodePath == [] then moveAndUp else emptyActionSet
+                Panning attrs ->
+                    moveAndUp
+
 
 directlyUnder xs ys = L.length xs - 1 == L.length ys
 
@@ -60,7 +64,9 @@ update : UpdateFunc State Action
 update action state =
     case action of
       DragNodeStart attrs -> { state | dragState <- Just <| DraggingNode attrs }
-      DragEdgeStart attrs -> { state | dragState <- Just <| DraggingEdge { attrs | upstreamNodes = upstreamNodes state.graph (fst attrs.fromPort) } }
+      DragEdgeStart attrs -> { state | dragState <- Just <| DraggingEdge
+                                  { attrs | upstreamNodes = upstreamNodes state.graph (fst attrs.fromPort) } }
+      PanStart attrs -> { state | dragState <- Just <| Panning attrs }
       DragMove mousePos ->
           case state.dragState of
             Just (DraggingNode attrs) ->
@@ -72,6 +78,8 @@ update action state =
             Just (DraggingEdge attrs) ->
                 { state | dragState <-
                             Just <| DraggingEdge { attrs | endPos <- mousePos } }
+            Just (Panning attrs) ->
+                { state | pan <- mousePos `pointSubtract` attrs.offset }
             Nothing -> state
             _ -> state
       DragEnd -> { state | dragState <- Nothing }

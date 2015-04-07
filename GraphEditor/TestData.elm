@@ -21,10 +21,10 @@ fooBarEdge = { from = (["foo"], ApResultSlot "out1"), to = (["bar"], ApParamSlot
 --fooBazEdge = { from = ("foo", "out2"), to = ("baz", "InC") }
 
 subBazNode = ApNode { title = "SubBaz", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
-subBazPosNode = { node = subBazNode, pos = (-50, -50), id = "baz1" }
+subBazPosNode = { node = subBazNode, pos = (50, 50), id = "baz1" }
 
 subBarNode = ApNode { title = "SubBar", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
-subBarPosNode = { node = subBarNode, pos = (50, 50), id = "bar1" }
+subBarPosNode = { node = subBarNode, pos = (-50, -50), id = "bar1" }
 
 subBarSubBazEdge = { from = (["lambda", "bar1"], ApResultSlot "out1"), to = (["lambda", "baz1"], ApParamSlot "InA") }
 
@@ -53,4 +53,4 @@ initGraph = let withNodes : Result String Graph
                  Err msg -> Debug.crash msg
 
 initState : State
-initState = { graph = initGraph, dragState = Nothing }
+initState = { emptyState | graph <- initGraph }
