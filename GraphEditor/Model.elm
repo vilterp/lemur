@@ -140,7 +140,10 @@ inPortState state (nodePath, slotId) =
                                               | fromNodePath == nodePath -> InvalidPort
                                               -- this node already taken
                                               | inPortTaken state.graph (nodePath, slotId) -> TakenPort
+                                              -- no cycles
                                               | nodePath `Set.member` attrs.upstreamNodes -> InvalidPort
+                                              -- can't go from in lambda to out
+                                              | goingUpTree fromNodePath nodePath -> InvalidPort
                                               -- TODO: wrong type!
                                               | otherwise -> ValidPort
 
@@ -183,3 +186,7 @@ upstreamNodes graph nodePath =
     let ofThisNode = L.map (fst << .from) (edgesTo graph nodePath)
         ofNodesOneUpstream = L.map (upstreamNodes graph) ofThisNode
     in multiUnion <| (Set.fromList ofThisNode) :: ofNodesOneUpstream
+
+goingUpTree : NodePath -> NodePath -> Bool
+goingUpTree fromPath toPath =
+    L.length fromPath > L.length toPath
