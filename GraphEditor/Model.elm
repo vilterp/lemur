@@ -117,7 +117,7 @@ addNode pathAbove posNode graph =
 -- TODO: this silently fails with an invalid path, which is not great.
 removeNode : Graph -> NodePath -> Result String Graph
 removeNode graph nodePath =
-    let involvingNode e = fst e.from `startsWith` nodePath && fst e.to `startsWith` nodePath
+    let involvingNode e = fst e.from `startsWith` nodePath || fst e.to `startsWith` nodePath
     in Debug.log "res" <| (nestedPosNodeUpdate graph.nodes nodePath (always Nothing)
             |> R.map (\newNodes -> { graph | nodes <- newNodes
                                            , edges <- L.filter (not << involvingNode) graph.edges }))
