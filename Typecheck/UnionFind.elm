@@ -1,6 +1,7 @@
-module UnionFind where
+module TypeCheck.UnionFind where
 
 -- dumb implementation cuz I don't have mutable references
+-- TODO: this should prob live in its own package
 
 import Dict as D
 import Set as S
