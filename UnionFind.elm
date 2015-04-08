@@ -33,6 +33,11 @@ union x y uf =
                 |> D.insert xRoot (xItems `S.union` yItems))
         _ -> Nothing
 
+sameSet : comparable -> comparable -> UnionFind comparable -> Bool
+sameSet x y uf = (getRepr x uf) == (getRepr y uf) -- hope this doesn't actually do set equality
+-- would be nice to return something more descriptive than `False` if one or both
+-- weren't found, but oh well
+
 -- TODO: get this to typecheck. it gives you a result telling you which variable
 -- wasn't found in error case
 --union uf x y =
