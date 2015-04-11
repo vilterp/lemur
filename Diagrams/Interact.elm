@@ -72,8 +72,8 @@ makeFoldUpdate : UpdateFunc m a -> RenderFunc m t a -> InteractUpdateFunc m t a
 makeFoldUpdate updateF renderF =
     \(loc, evt) intState ->
         let (newMS, actions) = processMouseEvent intState.diagram intState.mouseState evt
-            a = Debug.watch "actions" actions
-            b = Debug.watch "mouseState" <| L.map .tag newMS.overPath
+            a = Debug.log "actions" actions
+            --b = Debug.watch "mouseState" <| L.map .tag newMS.overPath
             -- new model
             oldModel = intState.modelState
             newModel = L.foldr updateF oldModel actions
@@ -82,7 +82,7 @@ makeFoldUpdate updateF renderF =
             newDiagram = renderF newModel
         in { mouseState = newMS
            , diagram = newDiagram
-           , modelState = newModel
+           , modelState = Debug.watch "state" newModel
            }
 
 initInteractState : RenderFunc m t a -> m -> InteractionState m t a

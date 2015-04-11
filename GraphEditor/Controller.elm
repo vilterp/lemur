@@ -15,7 +15,7 @@ import GraphEditor.View (..)
 
 updateNodeViews : NodeDict -> State -> NodeDict
 updateNodeViews nodeDict state =
-    D.map (\id posNode -> { posNode | cachedDiagram <- viewNode posNode.node [] state }) nodeDict
+    D.map (\id posNode -> { posNode | cachedDiagram <- viewNode posNode.node [id] state }) nodeDict
 
 updateGraphViews : Graph -> State -> Graph
 updateGraphViews graph state =
@@ -48,9 +48,9 @@ update action state =
       DragEnd -> updateStateViews { state | dragState <- Nothing }
       RemoveNode nodePath ->
           case removeNode state.graph nodePath of
-            Ok newGraph -> { state | graph <- newGraph }
+            Ok newGraph -> updateStateViews { state | graph <- newGraph }
             Err msg -> Debug.crash msg
-      RemoveEdge edge -> { state | graph <- removeEdge edge state.graph }
+      RemoveEdge edge -> updateStateViews { state | graph <- removeEdge edge state.graph }
       AddEdge edge ->
         case addEdge edge state.graph of
           Ok newGraph -> updateStateViews { state | graph <- newGraph

@@ -26,9 +26,7 @@ canvasActions nodePath dragState =
                                            , mouseUp <- Just <| stopBubbling <| always DragEnd }
           in case dragging of
                DraggingNode attrs ->
-                  let a = Debug.watch "anp" attrs.nodePath
-                      b = Debug.watch "np" nodePath
-                  in if attrs.nodePath `directlyUnder` nodePath then moveAndUp else emptyActionSet
+                  if attrs.nodePath `directlyUnder` nodePath then moveAndUp else emptyActionSet
                DraggingEdge attrs ->
                   if nodePath == [] then moveAndUp else emptyActionSet
 
