@@ -28,7 +28,7 @@ updateStateViews state =
 update : UpdateFunc State Action
 update action state =
     case action of
-      DragNodeStart attrs -> updateStateViews { state | dragState <- Just <| DraggingNode attrs }
+      DragNodeStart attrs -> { state | dragState <- Just <| DraggingNode attrs }
       DragEdgeStart attrs -> updateStateViews
                                 { state | dragState <- Just <| DraggingEdge
                                     { attrs | upstreamNodes = upstreamNodes state.graph (fst attrs.fromPort) } }

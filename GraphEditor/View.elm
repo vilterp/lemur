@@ -162,10 +162,10 @@ viewGenericEdge fromCoords toCoords =
    let (fcx, fcy) = fromCoords
        (tcx, tcy) = toCoords
        cpSpacing = 100
-   --in bezier fromCoords (fcx+cpSpacing, fcy)
-   --          (tcx-cpSpacing, tcy) toCoords
-   --          edgeStyle
-   in path [fromCoords, toCoords] edgeStyle
+   in bezier fromCoords (fcx+cpSpacing, fcy)
+             (tcx-cpSpacing, tcy) toCoords
+             edgeStyle
+   --in path [fromCoords, toCoords] edgeStyle
 
 viewDraggingEdge : OutPortId -> Diagram Tag Action -> Point -> Diagram Tag Action
 viewDraggingEdge outPort nodesDia mousePos =
