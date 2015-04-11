@@ -19,7 +19,7 @@ posNodeActions nodePath dragState =
 
 nodeXOutActions nodePath = { emptyActionSet | click <- Just <| keepBubbling <| always <| RemoveNode nodePath }
 
-edgeXOutActions edge = { emptyActionSet | click <- Just <| stopBubbling <| always <| RemoveEdge edge }
+edgeXOutActions edge = { emptyActionSet | click <- Just <| keepBubbling <| always <| RemoveEdge edge }
 
 canvasActions nodePath dragState =
     case dragState of
