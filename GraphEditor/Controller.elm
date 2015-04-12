@@ -116,6 +116,8 @@ update action state =
                 in { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode <- Nothing } }
             _ -> Debug.crash "unexpected event"
       DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
-          case moveNodeToLambda state.graph lambdaPath droppedNodePath posInLambda of
+          if canBeDroppedInLambda state.graph lambdaPath droppedNodePath
+          then case moveNodeToLambda state.graph lambdaPath droppedNodePath posInLambda of
             Ok newGraph -> { state | graph <- newGraph }
             Err msg -> Debug.crash msg
+          else state

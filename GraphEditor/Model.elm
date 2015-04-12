@@ -230,10 +230,14 @@ lambdaState state nodePath =
       Just (DraggingNode attrs) ->
           case attrs.overLambdaNode of
             Just overLN -> if overLN == nodePath
-                           then if (L.isEmpty <| edgesFrom state.graph attrs.nodePath)
-                                      && (L.isEmpty <| edgesTo state.graph attrs.nodePath)
+                           then if canBeDroppedInLambda state.graph overLN attrs.nodePath
                                 then ValidNodeOverLS
                                 else InvalidNodeOverLS
                            else NormalLS
             Nothing -> NormalLS
       _ -> NormalLS
+
+canBeDroppedInLambda : Graph -> NodePath -> NodePath -> Bool
+canBeDroppedInLambda graph lambdaPath draggingPath =
+    (L.isEmpty <| edgesFrom graph draggingPath)
+        && (L.isEmpty <| edgesTo graph draggingPath)
