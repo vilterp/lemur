@@ -28,6 +28,12 @@ portStateColorCode st = case st of
                           NormalPort -> normalPortColor
                           TakenPort -> normalPortColor
 
-lambdaNodeBgColor = Color.RGBA 220 255 255 1 -- cyan
+lambdaNodeBgColor : LambdaState -> Color.Color
+lambdaNodeBgColor state =
+    case state of
+      NormalLS -> Color.RGBA 220 255 255 1 -- cyan
+      ValidNodeOverLS -> Color.lightGreen
+      InvalidNodeOverLS -> Color.lightRed
+
 apNodeBgColor = Color.lightBlue
 ifNodeBgColor = Color.lightPurple

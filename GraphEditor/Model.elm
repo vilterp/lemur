@@ -47,6 +47,8 @@ type alias LambdaNodeAttrs = { nodes : NodeDict, dims : Dims }
 
 type alias Edge = { from : OutPortId, to : InPortId }
 
+type LambdaState = NormalLS | ValidNodeOverLS | InvalidNodeOverLS
+
 -- graph
 
 type alias NodeDict = D.Dict NodeId PosNode
@@ -56,7 +58,7 @@ emptyGraph = { nodes = D.empty, edges = [] }
 
 -- app state
 
-type DraggingState = DraggingNode { nodePath : NodePath, offset : Point } -- offset at lowest level
+type DraggingState = DraggingNode { nodePath : NodePath, offset : Point, overLambdaNode : Maybe NodePath } -- offset at lowest level
                    | DraggingEdge { fromPort : OutPortId, endPos : Point, upstreamNodes : Set.Set NodePath }
 
 type alias State = { graph : Graph, dragState : Maybe DraggingState }
@@ -70,14 +72,21 @@ type Tag = NodeIdT NodeId
          | XOut
          | Canvas
 
-type Action = DragNodeStart { nodePath : NodePath, offset : Point }
-            | DragEdgeStart { fromPort : OutPortId, endPos : Point }
-            | DragMove Point
-            | DragEnd
-            | RemoveNode NodePath
-            | RemoveEdge Edge
-            | AddEdge Edge
-            | NoOp
+type Action
+  -- dragging
+  = DragNodeStart { nodePath : NodePath, offset : Point }
+  | DragEdgeStart { fromPort : OutPortId, endPos : Point }
+  | DragMove Point
+  | DragEnd
+  -- add and remove
+  | AddNode PosNode
+  | RemoveNode NodePath
+  | AddEdge Edge
+  | RemoveEdge Edge
+  -- dropping into lambdas
+  | OverLambda NodePath
+  | NotOverLambda NodePath
+  | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath }
 
 -- operations
 
@@ -118,7 +127,7 @@ addNode pathAbove posNode graph =
 removeNode : Graph -> NodePath -> Result String Graph
 removeNode graph nodePath =
     let involvingNode e = fst e.from `startsWith` nodePath || fst e.to `startsWith` nodePath
-    in Debug.log "res" <| (nestedPosNodeUpdate graph.nodes nodePath (always Nothing)
+    in (nestedPosNodeUpdate graph.nodes nodePath (always Nothing)
             |> R.map (\newNodes -> { graph | nodes <- newNodes
                                            , edges <- L.filter (not << involvingNode) graph.edges }))
 

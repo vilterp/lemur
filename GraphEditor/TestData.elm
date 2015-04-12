@@ -38,7 +38,7 @@ lambdaPosNode = { node = lambdaNode, pos = (-450, -100), id = "lambda" }
 ifNode = IfNode
 ifPosNode = { id = "if1", node = ifNode, pos = (-200, 300) }
 
-nodes = [fooPosNode, bazPosNode, barPosNode, ifPosNode, lambdaPosNode]
+nodes = [lambdaPosNode, fooPosNode, bazPosNode, barPosNode, ifPosNode]
 edges = [fooBarEdge, subBarSubBazEdge]
 
 initGraph : Graph

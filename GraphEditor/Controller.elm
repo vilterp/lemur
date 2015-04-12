@@ -30,9 +30,17 @@ canvasActions nodePath dragState =
                                            , mouseUp <- Just <| stopBubbling <| always DragEnd }
           in case dragging of
                DraggingNode attrs ->
-                  if attrs.nodePath `directlyUnder` nodePath then moveAndUp else emptyActionSet
+                  if | attrs.nodePath `directlyUnder` nodePath -> moveAndUp 
+                     | attrs.nodePath `atOrAbove` nodePath ->
+                          { emptyActionSet | mouseEnter <- Just <| keepBubbling <| always <| OverLambda nodePath
+                                           , mouseLeave <- Just <| keepBubbling <| always <| NotOverLambda nodePath
+                                           , mouseUp <- Just <| keepBubbling <| always <|
+                                                DropNodeInLambda { lambdaPath = nodePath, droppedNodePath = attrs.nodePath } }
+                     | otherwise -> emptyActionSet
                DraggingEdge attrs ->
                   if nodePath == [] then moveAndUp else emptyActionSet
+
+atOrAbove xs ys = (xs /= ys) && (L.length xs <= L.length ys)
 
 directlyUnder xs ys = L.length xs - 1 == L.length ys
 
@@ -59,8 +67,10 @@ inPortActions state portId =
 update : UpdateFunc State Action
 update action state =
     case action of
-      DragNodeStart attrs -> { state | dragState <- Just <| DraggingNode attrs }
-      DragEdgeStart attrs -> { state | dragState <- Just <| DraggingEdge { attrs | upstreamNodes = upstreamNodes state.graph (fst attrs.fromPort) } }
+      -- dragging
+      DragNodeStart attrs -> { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode = Nothing } }
+      DragEdgeStart attrs -> { state | dragState <- Just <|
+          DraggingEdge { attrs | upstreamNodes = upstreamNodes state.graph (fst attrs.fromPort) } }
       DragMove mousePos ->
           case state.dragState of
             Just (DraggingNode attrs) ->
@@ -75,14 +85,32 @@ update action state =
             Nothing -> state
             _ -> state
       DragEnd -> { state | dragState <- Nothing }
+      -- add and remove
+      AddNode posNode ->
+          case addNode [] posNode state.graph of
+            Ok newGraph -> { state | graph <- newGraph }
+            Err msg -> Debug.crash msg
       RemoveNode nodePath ->
           case removeNode state.graph nodePath of
             Ok newGraph -> { state | graph <- newGraph }
             Err msg -> Debug.crash msg
-      RemoveEdge edge -> { state | graph <- removeEdge edge state.graph }
       AddEdge edge ->
-        case addEdge edge state.graph of
-          Ok newGraph -> { state | graph <- newGraph
-                                 , dragState <- Nothing }
-          Err msg -> Debug.crash msg
-      NoOp -> state
+          case addEdge edge state.graph of
+            Ok newGraph -> { state | graph <- newGraph
+                                   , dragState <- Nothing }
+            Err msg -> Debug.crash msg
+      RemoveEdge edge -> { state | graph <- removeEdge edge state.graph }
+      -- drag into lambdas
+      OverLambda lambdaPath ->
+          case state.dragState of
+            Just (DraggingNode attrs) ->
+                let ds = state.dragState
+                in { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode <- Just lambdaPath } }
+            _ -> Debug.crash "unexpected event"
+      NotOverLambda lambdaPath ->
+          case state.dragState of
+            Just (DraggingNode attrs) ->
+                let ds = state.dragState
+                in { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode <- Nothing } }
+            _ -> Debug.crash "unexpected event"
+      DropNodeInLambda {lambdaPath, droppedNodePath} -> state -- TODO
