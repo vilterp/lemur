@@ -126,9 +126,10 @@ viewLambdaNode node nodePath state =
         titleRow = flexCenter (nodeTitle "Lambda" Color.black nodePath) funcOutPort
         nodes = zcat <| L.map (viewPosNode state nodePath) <| D.values node.nodes
         subCanvas = centered <| tagWithActions Canvas (canvasActions nodePath state.dragState) <|
-                      zcat [nodes, rect node.dims.width node.dims.height invisible]
-    in background (fillAndStroke (C.Solid lambdaNodeBgColor) defaultStroke) <|
-          layout <| [titleRow, hrule nodeTopDivider 3, subCanvas]
+                      pad 7 <| zcat [nodes, rect node.dims.width node.dims.height invisible]
+        lState = lambdaState state nodePath
+    in background (fillAndStroke (C.Solid <| lambdaNodeBgColor lState) defaultStroke) <|
+        layout <| [titleRow, hrule nodeTopDivider 3, subCanvas]
 
 -- TODO: padding is awkward
 viewApNode : ApNodeAttrs -> NodePath -> State -> Diagram Tag Action
@@ -201,6 +202,7 @@ viewEdgeXOut nodesDia edge =
 
 viewGraph : State -> Diagram Tag Action
 viewGraph state = 
+    -- TODO: draw lambda nodes under other nodes
     let nodes = zcat <| L.map (viewPosNode state []) <| D.values state.graph.nodes
         edges = zcat <| L.map (viewEdge nodes) state.graph.edges
         edgeXOuts = zcat <| L.map (viewEdgeXOut nodes) state.graph.edges
