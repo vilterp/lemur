@@ -86,7 +86,7 @@ type Action
   -- dropping into lambdas
   | OverLambda NodePath
   | NotOverLambda NodePath
-  | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath }
+  | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
 
 -- operations
 
@@ -130,6 +130,28 @@ removeNode graph nodePath =
     in (nestedPosNodeUpdate graph.nodes nodePath (always Nothing)
             |> R.map (\newNodes -> { graph | nodes <- newNodes
                                            , edges <- L.filter (not << involvingNode) graph.edges }))
+
+getNode : Graph -> NodePath -> Result String PosNode
+getNode graph nodePath =
+    let recurse nodeDict path =
+          case path of
+            [] -> Err "invalid path"
+            [x] -> D.get x nodeDict |> R.fromMaybe ("not found:" ++ x)
+            (x::xs) ->
+                (D.get x nodeDict |> R.fromMaybe ("not found:" ++ x))
+                  `R.andThen` (\posNode ->
+                    case posNode.node of
+                      LambdaNode {nodes, dims} ->
+                          recurse nodes xs
+                      _ -> Err <| x ++ " not a lambda node")
+    in recurse graph.nodes nodePath
+
+moveNodeToLambda : Graph -> NodePath -> NodePath -> Point -> Result String Graph
+moveNodeToLambda graph lambdaPath droppedNodePath posInLambda =
+    (getNode graph droppedNodePath)
+      `R.andThen` (\posNode -> (removeNode graph droppedNodePath)
+        `R.andThen` (\newGraph ->
+          addNode (lambdaPath ++ droppedNodePath) { posNode | pos <- posInLambda } newGraph))
 
 -- queries
 

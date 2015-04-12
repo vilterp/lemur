@@ -34,8 +34,10 @@ canvasActions nodePath dragState =
                      | attrs.nodePath `atOrAbove` nodePath ->
                           { emptyActionSet | mouseEnter <- Just <| keepBubbling <| always <| OverLambda nodePath
                                            , mouseLeave <- Just <| keepBubbling <| always <| NotOverLambda nodePath
-                                           , mouseUp <- Just <| keepBubbling <| always <|
-                                                DropNodeInLambda { lambdaPath = nodePath, droppedNodePath = attrs.nodePath } }
+                                           , mouseUp <- Just <| keepBubbling <|
+                                              (\(MouseEvent evt) -> DropNodeInLambda { lambdaPath = nodePath
+                                                                                     , droppedNodePath = attrs.nodePath
+                                                                                     , posInLambda = evt.offset }) }
                      | otherwise -> emptyActionSet
                DraggingEdge attrs ->
                   if nodePath == [] then moveAndUp else emptyActionSet
@@ -113,4 +115,7 @@ update action state =
                 let ds = state.dragState
                 in { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode <- Nothing } }
             _ -> Debug.crash "unexpected event"
-      DropNodeInLambda {lambdaPath, droppedNodePath} -> state -- TODO
+      DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
+          case moveNodeToLambda state.graph lambdaPath droppedNodePath posInLambda of
+            Ok newGraph -> { state | graph <- newGraph }
+            Err msg -> Debug.crash msg
