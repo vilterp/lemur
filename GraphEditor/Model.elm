@@ -144,17 +144,19 @@ inPortState state (nodePath, slotId) =
     else case state.dragState of
            Nothing -> NormalPort
            Just (DraggingNode _) -> NormalPort
-           Just (DraggingEdge attrs) -> let (fromNodePath, _) = attrs.fromPort
-                                        in if -- dragging from this node
-                                              | fromNodePath == nodePath -> InvalidPort
-                                              -- this node already taken
-                                              | inPortTaken state.graph (nodePath, slotId) -> TakenPort
-                                              -- no cycles
-                                              | nodePath `Set.member` attrs.upstreamNodes -> InvalidPort
-                                              -- can't go from in lambda to out
-                                              | goingUpTree fromNodePath nodePath -> InvalidPort
-                                              -- TODO: wrong type!
-                                              | otherwise -> ValidPort
+           Just (DraggingEdge attrs) ->
+              let (fromNodePath, _) = attrs.fromPort
+              in if -- dragging from this node
+                    | nodePath `startsWith` fromNodePath -> InvalidPort
+                    -- this node already taken
+                    | inPortTaken state.graph (nodePath, slotId) -> TakenPort
+                    -- no cycles
+                    | nodePath `Set.member` attrs.upstreamNodes -> InvalidPort
+                    | L.any (\unPath -> nodePath `startsWith` unPath) (Set.toList <| attrs.upstreamNodes) -> InvalidPort
+                    -- can't go from in lambda to out
+                    | goingUpTree fromNodePath nodePath -> InvalidPort
+                    -- TODO: wrong type!
+                    | otherwise -> ValidPort
 
 -- TODO: highlight as valid when you mouse over an in port of same type
 outPortState : State -> OutPortId -> PortState
@@ -199,3 +201,17 @@ upstreamNodes graph nodePath =
 goingUpTree : NodePath -> NodePath -> Bool
 goingUpTree fromPath toPath =
     L.length fromPath > L.length toPath
+
+lambdaState : State -> NodePath -> LambdaState
+lambdaState state nodePath =
+    case state.dragState of
+      Just (DraggingNode attrs) ->
+          case attrs.overLambdaNode of
+            Just overLN -> if overLN == nodePath
+                           then if (L.isEmpty <| edgesFrom state.graph attrs.nodePath)
+                                      && (L.isEmpty <| edgesTo state.graph attrs.nodePath)
+                                then ValidNodeOverLS
+                                else InvalidNodeOverLS
+                           else NormalLS
+            Nothing -> NormalLS
+      _ -> NormalLS

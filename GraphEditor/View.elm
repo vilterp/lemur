@@ -125,19 +125,8 @@ viewLambdaNode node nodePath state =
         nodes = zcat <| L.map (viewPosNode state nodePath) <| D.values node.nodes
         subCanvas = centered <| tagWithActions Canvas (canvasActions nodePath state.dragState) <|
                       pad 7 <| zcat [nodes, rect node.dims.width node.dims.height invisible]
-        lambdaState =
-            case state.dragState of
-              Just (DraggingNode attrs) ->
-                  case attrs.overLambdaNode of
-                    Just overLN -> if overLN == nodePath
-                                   then if (L.isEmpty <| edgesFrom state.graph attrs.nodePath)
-                                              && (L.isEmpty <| edgesTo state.graph attrs.nodePath)
-                                        then ValidNodeOverLS
-                                        else InvalidNodeOverLS
-                                   else NormalLS
-                    Nothing -> NormalLS
-              _ -> NormalLS
-    in background (fillAndStroke (C.Solid <| lambdaNodeBgColor lambdaState) defaultStroke) <|
+        lState = lambdaState state nodePath
+    in background (fillAndStroke (C.Solid <| lambdaNodeBgColor lState) defaultStroke) <|
         layout <| [titleRow, hrule nodeTopDivider 3, subCanvas]
 
 -- TODO: padding is awkward
