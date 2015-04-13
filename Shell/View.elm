@@ -7,7 +7,7 @@ import Html.Events (..)
 import LocalChannel as LC
 import Signal as S
 
-import GraphEditor.Model as GEM
+import GraphEditor as GE
 import Shell.Model (..)
 
 view : (S.Channel Update) -> State -> Html
@@ -18,7 +18,7 @@ view updates state =
         [ topSection
         , actionBar
         , elementsPanelView sidebarUpdates state.sidebarState
-        , centerSection state.graphState
+        , centerSection state
         , rightSection
         ]
 
@@ -75,7 +75,7 @@ actionbarSep = div [ class "actionbar-vertsep" ] []
 
 -- CENTER SECTION
 
-centerSection : GEM.State -> Html
+centerSection : State -> Html
 centerSection state =
     div
       [ id "center" ]
@@ -91,7 +91,7 @@ centerSection state =
               [ id "canvas-viewport"
               , style [("width", "100%"), ("height", "100%"), ("position", "absolute"), ("overflow", "hidden"), ("background", "white url(/img/light_gray_grid.gif) repeat;")]
               ]
-              [text "sup"]
+              [GE.view state.graphState state.editorLoc.dims]
           ]
       ]
 

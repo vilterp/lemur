@@ -2,13 +2,16 @@ module Shell.Controller where
 
 import Debug
 
+import GraphEditor as GE
+
 import Shell.Model (..)
 
 update : Update -> State -> State
 update up state =
   case up of
     ElemPanelUpdate action -> { state | sidebarState <- sidebarUpdate action state.sidebarState }
-    -- MouseEventUpdate me -> { state | graphState <- GE.upstate me state.graphState }
+    MouseUpdate mouseUp -> { state | graphState <- GE.update mouseUp state.graphState
+                                   , editorLoc <- fst mouseUp }
     NoOp -> state
 
 sidebarUpdate : SidebarAction -> SidebarState -> SidebarState
