@@ -53,4 +53,4 @@ initGraph = let withNodes : Result String Graph
                  Err msg -> Debug.crash msg
 
 initState : State
-initState = { graph = initGraph, dragState = Nothing }
+initState = { emptyState | graph <- initGraph }

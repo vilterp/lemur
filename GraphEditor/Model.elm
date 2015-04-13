@@ -60,33 +60,39 @@ emptyGraph = { nodes = D.empty, edges = [] }
 
 type DraggingState = DraggingNode { nodePath : NodePath, offset : Point, overLambdaNode : Maybe NodePath } -- offset at lowest level
                    | DraggingEdge { fromPort : OutPortId, endPos : Point, upstreamNodes : Set.Set NodePath }
+                   | DragPanning { offset : Point }
 
-type alias State = { graph : Graph, dragState : Maybe DraggingState }
+type alias State = { graph : Graph, dragState : Maybe DraggingState, pan : Point }
+
+emptyState = { graph = emptyGraph, dragState = Nothing, pan = (0, 0) }
 
 -- tags
 
-type Tag = NodeIdT NodeId
-         | TitleT
-         | InPortT InSlotId
-         | OutPortT OutSlotId
-         | XOut
-         | Canvas
+type Tag
+    = TopLevel
+    | NodeIdT NodeId
+    | TitleT
+    | InPortT InSlotId
+    | OutPortT OutSlotId
+    | XOut
+    | Canvas
 
 type Action
-  -- dragging
-  = DragNodeStart { nodePath : NodePath, offset : Point }
-  | DragEdgeStart { fromPort : OutPortId, endPos : Point }
-  | DragMove Point
-  | DragEnd
-  -- add and remove
-  | AddNode PosNode
-  | RemoveNode NodePath
-  | AddEdge Edge
-  | RemoveEdge Edge
-  -- dropping into lambdas
-  | OverLambda NodePath
-  | NotOverLambda NodePath
-  | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
+    -- dragging & panning
+    = DragNodeStart { nodePath : NodePath, offset : Point }
+    | DragEdgeStart { fromPort : OutPortId, endPos : Point }
+    | PanStart { offset : Point }
+    | DragMove Point
+    | DragEnd
+    -- add and remove
+    | AddNode PosNode
+    | RemoveNode NodePath
+    | AddEdge Edge
+    | RemoveEdge Edge
+    -- dropping into lambdas
+    | OverLambda NodePath
+    | NotOverLambda NodePath
+    | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
 
 -- operations
 
@@ -164,8 +170,6 @@ inPortState state (nodePath, slotId) =
     if funcOutPortUsed state nodePath
     then InvalidPort
     else case state.dragState of
-           Nothing -> NormalPort
-           Just (DraggingNode _) -> NormalPort
            Just (DraggingEdge attrs) ->
               let (fromNodePath, _) = attrs.fromPort
               in if -- dragging from this node
@@ -179,6 +183,7 @@ inPortState state (nodePath, slotId) =
                     | goingUpTree fromNodePath nodePath -> InvalidPort
                     -- TODO: wrong type!
                     | otherwise -> ValidPort
+           _ -> NormalPort
 
 -- TODO: highlight as valid when you mouse over an in port of same type
 outPortState : State -> OutPortId -> PortState
