@@ -7,6 +7,8 @@ import Html.Events (..)
 import LocalChannel as LC
 import Signal as S
 
+import Diagrams.Wiring as DW
+
 import GraphEditor as GE
 import Shell.Model (..)
 
@@ -89,7 +91,7 @@ centerSection state =
           [ class "center-scroll" ]
           [ div
               [ id "canvas-viewport"
-              , style [("width", "100%"), ("height", "100%"), ("position", "absolute"), ("overflow", "hidden"), ("background", "white url(/img/light_gray_grid.gif) repeat;")]
+              , style [("width", "100%"), ("height", "100%")]
               ]
               [GE.view state.graphState state.editorLoc.dims]
           ]

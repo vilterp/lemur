@@ -12,11 +12,6 @@ import Signal as S
 
 htmlUpdates = S.channel NoOp
 
--- TODO: scale with window
-editorLocFunc : DW.CollageLocFunc
-editorLocFunc windowDims =
-  { offset = (252, 101), dims = { width = 800, height = 800 } }
-
 mouseUpdates : Signal (DW.CollageLocation, DW.PrimMouseEvent)
 mouseUpdates = DW.makeUpdateStream editorLocFunc
 
