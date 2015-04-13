@@ -1,0 +1,262 @@
+/* TODO: factor out numbers */
+/* TODO: split by components (???) */
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+}
+
+#top {
+    width: 100%;
+    height: 34px;
+    border-bottom: solid black 1px;
+}
+
+#logo {
+    background-color: blue;
+    color: white;
+    font-size: 24px;
+    float: left;
+    padding: 5px;
+}
+
+.breadcrumb {
+    float: left;
+    padding: 7px 5px 5px;
+}
+
+.breadcrumb-sep {
+    color: grey;
+}
+
+#user-state {
+    float: right;
+}
+
+/* TODO: actual image... */
+#prof-pic {
+    /*width: 34px;*/
+    /*height: 34px;*/
+    background-color: blue;
+    float: left;
+    padding: 9px;
+    color: white;
+}
+
+#username {
+    padding: 3px;
+    float: left;
+}
+
+#logout {
+    font-size: small;
+    padding: 3px;
+    color: grey;
+    float: left;
+}
+
+#action-bar {
+    position: absolute;
+    top: 35px;
+    height: 34px;
+    border-bottom: 1px solid black;
+    background-color: lightgrey;
+    width: 100%;
+}
+
+#left {
+    left: 0;
+    width: 250px;
+    top: 70px;
+    bottom: 0;
+    position: absolute;
+    border-right: solid black 1px;
+    overflow: hidden;
+    background-color: #e8e8e8;
+}
+
+#right {
+    right: 0;
+    width: 250px;
+    top: 70px;
+    bottom: 0;
+    position: absolute;
+    border-left: solid black 1px;
+    overflow: hidden;
+    background-color: #e8e8e8;
+}
+
+#center {
+    left: 251px;
+    right: 250px;
+    top: 70px;
+    bottom: 0;
+    position: absolute;
+    overflow: hidden;
+}
+
+.panel-scroll {
+    position: absolute;
+    top: 31px;
+    bottom: 0;
+    overflow: scroll;
+    width: 100%;
+}
+
+.panel-scroll-contents {
+    padding: 7px;
+}
+
+.panel-header-label {
+    padding: 8px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.center-actionbar-label {
+    padding: 10px;
+    font-weight: bold;
+}
+
+.center-contents {
+    padding: 10px;
+}
+
+.center-scroll {
+    position: absolute;
+    top: 31px;
+    bottom: 0;
+    overflow: scroll;
+    width: 100%;
+}
+
+#doc-name {
+    font-size: 25px;
+}
+
+#doc-name:hover {
+    cursor: pointer;
+    background-color: lightgrey;
+}
+
+.masthead-item {
+    padding: 9px;
+    float: left;
+}
+
+#saving-indicator {
+    margin-top: 9px;
+    font-size: small;
+    color: grey;
+    font-style: italic;
+    font-family: sans-serif;
+}
+
+.actionbar-button {
+    float: left;
+    background-color: white;
+    padding: 4px;
+    margin: 2px;
+    cursor: pointer;
+}
+
+#actionbar-left-buttons {
+    margin-left: 3px;
+}
+
+#actionbar-right-buttons {
+    float: right;
+    margin-right: 3px;
+}
+
+.panel-header {
+    height: 29px;
+    border-bottom: solid black 1px;
+    background-color: lightgray;
+}
+
+.focused-section-header {
+    background-color: lightblue;
+}
+
+.actionbar-vertsep {
+    float: left;
+    background-color: black;
+    width: 1px;
+    height: 29px;
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+.panel-contents-heading {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.panel-contents-list {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.heading-label {
+    display: inline-block;
+    font-weight: bold;
+}
+
+.heading-button {
+    display: inline-block;
+    padding-left: 3px;
+    padding-right: 3px;
+    background-color: white;
+    cursor: pointer;
+}
+
+ul.module-elements {
+    margin: 0;
+    padding-left: 5px;
+}
+
+li.module-element {
+    list-style: none;
+    padding-bottom: 7px;
+    cursor: pointer;
+}
+
+/* TODO: should highlight whole row, including icon */
+li.module-element.selected {
+    background-color: darkgray;
+}
+
+#searchbar-container {
+    display: inline-block;
+}
+
+.tab {
+    background-color: darkgray;
+    float: left;
+    height: 29px;
+    padding-left: 5px;
+    padding-right: 5px;
+    border-right: solid #656565 1px;
+    cursor: pointer;
+}
+
+.tab.selected {
+    background-color: lightblue;
+    height: 29px;
+    border-bottom: none;
+}
+
+.element-label {
+    height: 20px;
+}
+
+.element-icon {
+    float: left;
+}
+
+.element-label-text {
+    float: left;
+    padding-top: 2px;
+    padding-left: 5px;
+}
