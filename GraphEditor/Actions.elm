@@ -1,6 +1,7 @@
 module GraphEditor.Actions where
 
 import List as L
+import Maybe as M
 import Debug
 
 import Diagrams.Actions (..)
@@ -37,7 +38,7 @@ outPortActions : State -> OutPortId -> ActionSet Tag Action
 outPortActions state portId =
     if outPortState state portId == NormalPort
     then { emptyActionSet | mouseDown <- Just <| stopBubbling <|
-              \evt -> DragEdgeStart { fromPort = portId, endPos = collageMousePos evt } }
+              \evt -> DragEdgeStart { fromPort = portId, endPos = M.withDefault (0,0) (mousePosAtPath evt [Canvas]) } }
     else emptyActionSet
 
 inPortActions : State -> InPortId -> ActionSet Tag Action

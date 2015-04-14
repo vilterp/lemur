@@ -5,6 +5,7 @@ import Debug
 import List as L
 import Dict as D
 import Result as R
+import Maybe as M
 
 import Diagrams.Interact (..)
 import Diagrams.Geom (..)
@@ -44,7 +45,7 @@ outPortActions : State -> OutPortId -> ActionSet Tag Action
 outPortActions state portId =
     if outPortState state portId == NormalPort
     then { emptyActionSet | mouseDown <- Just <| stopBubbling <|
-              \evt -> DragEdgeStart { fromPort = portId, endPos = collageMousePos evt } }
+              \evt -> DragEdgeStart { fromPort = portId, endPos = M.withDefault (0, 0) (mousePosAtPath evt [Canvas]) } }
     else emptyActionSet
 
 inPortActions : State -> InPortId -> ActionSet Tag Action
