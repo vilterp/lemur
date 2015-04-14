@@ -12,6 +12,7 @@ type Expr
     | Variable String
     | MemberAccess Expr String
     | FuncCall { func : Expr, args : List Expr }
+    | BinOp String Expr Expr
     | None
 
 type Statement
@@ -29,12 +30,17 @@ exprToPython expr =
       IntLit x -> toString x
       StringLit str -> toString str
       Variable str -> str
-      MemberAccess exp memb -> (parens <| exprToPython exp) ++ "." ++ memb
+      MemberAccess exp memb -> (exprToPython exp) ++ "." ++ memb
       FuncCall {func, args} ->
           (exprToPython func) ++
             (parens <|
               S.join ", " <|
                 L.map exprToPython args)
+      BinOp op left right ->
+          "(" ++
+            (exprToPython left) ++
+              " " ++ op ++ " " ++
+                (exprToPython right) ++ ")"
       None -> "None"
 
 statementToPython : Statement -> String
