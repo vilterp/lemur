@@ -32,8 +32,10 @@ topLevelActions state =
 canvasActions nodePath dragState =
     case dragState of
       Nothing ->
-          { emptyActionSet | mouseDown <- Just <|
-              stopBubbling <| \(MouseEvent evt) -> PanStart { offset = evt.offset } }
+          if nodePath == []
+          then { emptyActionSet | mouseDown <- Just <|
+                  stopBubbling <| \(MouseEvent evt) -> PanStart { offset = evt.offset } }
+          else emptyActionSet
       Just dragging ->
           let moveAndUp = { emptyActionSet | mouseMove <- Just <|
                                                 stopBubbling <| \(MouseEvent evt) -> DragMove evt.offset
