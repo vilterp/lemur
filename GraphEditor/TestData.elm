@@ -17,8 +17,10 @@ bazPosNode = { node = bazNode, pos = (100, -200), id = "baz" }
 barNode = ApNode { title = "Bar", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
 barPosNode = { node = barNode, pos = (100, 100), id = "bar" }
 
+lambdaFooEdge = { from = (["lambda"], FuncValueSlot), to = (["foo"], ApParamSlot "InC") }
 fooBarEdge = { from = (["foo"], ApResultSlot "out1"), to = (["bar"], ApParamSlot "InA") }
---fooBazEdge = { from = ("foo", "out2"), to = ("baz", "InC") }
+barBazEdge = { from = (["bar"], ApResultSlot "out1"), to = (["baz"], ApParamSlot "InA") }
+bazIfEdge = { from = (["baz"], ApResultSlot "out1"), to = (["if1"], IfCondSlot) }
 
 subBazNode = ApNode { title = "SubBaz", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
 subBazPosNode = { node = subBazNode, pos = (-50, -50), id = "baz1" }
@@ -39,7 +41,7 @@ ifNode = IfNode
 ifPosNode = { id = "if1", node = ifNode, pos = (-200, 300) }
 
 nodes = [lambdaPosNode, fooPosNode, bazPosNode, barPosNode, ifPosNode]
-edges = [fooBarEdge, subBarSubBazEdge]
+edges = [fooBarEdge, barBazEdge, subBarSubBazEdge, lambdaFooEdge, bazIfEdge]
 
 initGraph : Graph
 initGraph = let withNodes : Result String Graph
