@@ -24,14 +24,24 @@ fib =
           [ Return <|
               BinOp
                 "+"
-                (BinOp
-                  "-"
-                  (Variable "n")
-                  (IntLit 1))
-                (BinOp
-                  "-"
-                  (Variable "n")
-                  (IntLit 2))
+                (FuncCall
+                  { func = Variable "fib"
+                  , args =
+                    [ (BinOp
+                        "-"
+                        (Variable "n")
+                        (IntLit 1))
+                    ]
+                  })
+                (FuncCall
+                  { func = Variable "fib"
+                  , args =
+                    [ (BinOp
+                        "-"
+                        (Variable "n")
+                        (IntLit 1))
+                    ]
+                  })
           ]
         }
       ]
