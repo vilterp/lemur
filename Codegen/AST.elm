@@ -46,22 +46,26 @@ exprToPython expr =
 statementToPython : Statement -> String
 statementToPython stmt =
     let recurse stmt =
-      case stmt of
-        FuncDef {name, args, body} ->
-            [ headerBlock
-                ("def " ++ name ++ (parens <| S.join ", " args) ++ ":")
-                (L.concatMap recurse body)
-            ]
-        IfStmt {cond, ifBlock, elseBlock} ->
-            [ headerBlock
-                ("if " ++ (exprToPython cond) ++ ":")
-                (L.concatMap recurse ifBlock)
-            , headerBlock
-                "else:"
-                (L.concatMap recurse elseBlock)
-            ]
-        VarAssn {varName, expr} ->
-            [leaf <| varName ++ " = " ++ (exprToPython expr)]
-        Return expr ->
-            [leaf <| "return " ++ (exprToPython expr)]
+          case stmt of
+            FuncDef {name, args, body} ->
+                [ headerBlock
+                    ("def " ++ name ++ (parens <| S.join ", " args) ++ ":")
+                    (blockToTree body)
+                ]
+            IfStmt {cond, ifBlock, elseBlock} ->
+                [ headerBlock
+                    ("if " ++ (exprToPython cond) ++ ":")
+                    (blockToTree ifBlock)
+                , headerBlock
+                    "else:"
+                    (blockToTree elseBlock)
+                ]
+            VarAssn {varName, expr} ->
+                [leaf <| varName ++ " = " ++ (exprToPython expr)]
+            Return expr ->
+                [leaf <| "return " ++ (exprToPython expr)]
+        blockToTree block =
+          case block of
+            [] -> [ leaf "pass" ]
+            _ -> L.concatMap recurse block
     in recurse stmt |> L.map stringify |> S.join "\n\n"

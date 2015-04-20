@@ -41,13 +41,13 @@ type Node = ApNode ApNodeAttrs
           | IfNode
           | LambdaNode LambdaNodeAttrs
 
--- TODO: this attrs thing is awkward
 type alias ApNodeAttrs = { title : String, params : List String, results : List String }
 type alias LambdaNodeAttrs = { nodes : NodeDict, dims : Dims }
 
 emptyLambdaNode =
     LambdaNode { nodes = D.empty, dims = { width = 200, height = 200 } }
 
+-- TODO: should prob be src & dst
 type alias Edge = { from : OutPortId, to : InPortId }
 
 type LambdaState = NormalLS | ValidNodeOverLS | InvalidNodeOverLS
@@ -251,3 +251,19 @@ canBeDroppedInLambda : Graph -> NodePath -> NodePath -> Bool
 canBeDroppedInLambda graph lambdaPath draggingPath =
     (L.isEmpty <| edgesFrom graph draggingPath)
         && (L.isEmpty <| edgesTo graph draggingPath)
+
+inSlots : Node -> List InSlotId
+inSlots node =
+    case node of
+      ApNode attrs -> L.map ApParamSlot attrs.params
+      IfNode -> [IfCondSlot, IfTrueSlot, IfFalseSlot]
+      LambdaNode _ -> []
+
+freeInPorts : Graph -> List InPortId
+freeInPorts graph =
+    let takenInPorts = L.map .to graph.edges
+        allInPorts =
+            D.toList graph.nodes
+              |> L.concatMap (\(nodeId, posNode) -> inSlots posNode.node
+                                |> L.map (\slot -> ([nodeId], slot)))
+    in allInPorts |> L.filter (\ip -> not <| ip `L.member` takenInPorts)
