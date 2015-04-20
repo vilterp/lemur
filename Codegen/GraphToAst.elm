@@ -98,12 +98,16 @@ nodeToStmt graph (nodePath, node) =
 
 makeReturnStmt : Graph -> AST.Statement
 makeReturnStmt graph =
-    freeOutPorts graph
-      |> L.map (\op -> let var = outPortToString op
+    case freeOutPorts graph of
+      [op] ->
+          outPortToString op |> AST.Variable |> AST.Return
+      outPorts ->
+          outPorts
+            |> L.map (\op -> let var = outPortToString op
                        in (var, AST.Variable var))
-      |> D.fromList
-      |> AST.DictLiteral
-      |> AST.Return
+            |> D.fromList
+            |> AST.DictLiteral
+            |> AST.Return
 
 -- TODO: this will always be a FuncDef, not just any statement
 toAst : String -> Graph -> AST.Statement
