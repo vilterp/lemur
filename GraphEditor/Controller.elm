@@ -107,7 +107,7 @@ update action state =
       DragEnd -> { state | dragState <- Nothing }
       -- add and remove
       AddNode posNode ->
-          case addNode [] posNode state.graph of
+          case addNode [posNode.id] posNode state.graph of
             Ok newGraph -> { state | graph <- newGraph }
             Err msg -> Debug.crash msg
       RemoveNode nodePath ->

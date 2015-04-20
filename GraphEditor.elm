@@ -62,7 +62,7 @@ update evt state =
               newPosNode = { pos = defaultPos, id = newId, node = newNode }
           in { state | intState <- DI.updateModel
                           (\geState ->
-                              { geState | graph <- getOrCrash <| GEM.addNode [] newPosNode geState.graph })
+                              { geState | graph <- getOrCrash <| GEM.addNode [newId] newPosNode geState.graph })
                           state.intState
                      , lambdaId <- state.lambdaId + 1
                      }

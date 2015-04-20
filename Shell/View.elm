@@ -9,16 +9,17 @@ import Signal as S
 
 import Diagrams.Wiring as DW
 
-import GraphEditor as GE
+import GraphEditor
 import Shell.Model (..)
+import Shell.ActionBar as ActionBar
 
-view : (S.Channel Update) -> State -> Html
+view : S.Channel Update -> State -> Html
 view updates state =
     let sidebarUpdates = LC.create ElemPanelUpdate updates
     in div
         [ id "app" ]
         [ topSection
-        , actionBar
+        , ActionBar.view updates state
         , elementsPanelView sidebarUpdates state.sidebarState
         , centerSection state
         , rightSection
@@ -46,36 +47,6 @@ topSection =
           ]
       ]
 
--- ACTION BAR
-
--- TODO: move into own file
-
-actionBar : Html
-actionBar =
-    div
-      [ id "action-bar" ]
-      [ actionbarButton "Undo"
-      , actionbarButton "Redo"
-      , actionbarSep
-      , actionbarButton "Back"
-      , actionbarButton "Forward"
-      , actionbarSep
-      , actionbarButton "Insert Literal"
-      , actionbarSep
-      , actionbarButton "Factor out"
-      , actionbarButton "Rename"
-      , actionbarButton "Open Definition"
-      , actionbarButton "Visualize"
-      , actionbarSep
-      , actionbarButton "Run"
-      ]
-
--- Later: KB shortcut (for display), icon, callback (?)
-actionbarButton : String -> Html
-actionbarButton name = div [ class "actionbar-button" ] [ text name ]
-
-actionbarSep : Html
-actionbarSep = div [ class "actionbar-vertsep" ] []
 
 -- CENTER SECTION
 
@@ -97,7 +68,7 @@ centerSection state =
               [ id "canvas-viewport"
               , style [("width", "100%"), ("height", "100%")]
               ]
-              [GE.view state.graphState]
+              [GraphEditor.view state.graphState]
           ]
       ]
 

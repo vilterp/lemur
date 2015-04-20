@@ -127,9 +127,11 @@ addEdge newEdge graph = Ok { graph | edges <- newEdge :: graph.edges }
 removeEdge : Edge -> Graph -> Graph
 removeEdge edge graph = { graph | edges <- L.filter (\e -> e /= edge) graph.edges }
 
+-- TODO: I think first arg should really be pathAbove, but don't feel like
+-- refactoring. Need Elm IDE!
 addNode : NodePath -> PosNode -> Graph -> Result String Graph
-addNode pathAbove posNode graph =
-    nestedPosNodeUpdate graph.nodes pathAbove (always <| Just posNode)
+addNode fullPath posNode graph =
+    nestedPosNodeUpdate graph.nodes fullPath (always <| Just posNode)
       |> R.map (\newNodes -> { graph | nodes <- newNodes })
 
 -- TODO: this silently fails with an invalid path, which is not great.
@@ -169,21 +171,21 @@ inPortTaken g inPort = L.any (\{from, to} -> to == inPort) g.edges
 
 -- TODO(perf): these are same for duration of drag. could save somewhere.
 inPortState : State -> InPortId -> PortState
-inPortState state (nodePath, slotId) =
-    if funcOutPortUsed state nodePath
+inPortState state (thisNodePath, slotId) =
+    if funcOutPortUsed state thisNodePath
     then InvalidPort
     else case state.dragState of
            Just (DraggingEdge attrs) ->
               let (fromNodePath, _) = attrs.fromPort
               in if -- dragging from this node
-                    | nodePath `startsWith` fromNodePath -> InvalidPort
+                    | thisNodePath `startsWith` fromNodePath -> InvalidPort
                     -- this node already taken
-                    | inPortTaken state.graph (nodePath, slotId) -> TakenPort
+                    | inPortTaken state.graph (thisNodePath, slotId) -> TakenPort
                     -- no cycles
-                    | nodePath `Set.member` attrs.upstreamNodes -> InvalidPort
-                    | L.any (\unPath -> nodePath `startsWith` unPath) (Set.toList <| attrs.upstreamNodes) -> InvalidPort
+                    | thisNodePath `Set.member` attrs.upstreamNodes -> InvalidPort
+                    | L.any (\unPath -> thisNodePath `startsWith` unPath) (Set.toList <| attrs.upstreamNodes) -> InvalidPort
                     -- can't go from in lambda to out
-                    | goingUpTree fromNodePath nodePath -> InvalidPort
+                    | goingUpTree fromNodePath thisNodePath -> InvalidPort
                     -- TODO: wrong type!
                     | otherwise -> ValidPort
            _ -> NormalPort
