@@ -13,6 +13,7 @@ type Expr
     | MemberAccess Expr String
     | FuncCall { func : Expr, args : List Expr }
     | BinOp String Expr Expr
+    | DictLiteral (D.Dict String Expr)
     | None
 
 type Statement
@@ -36,6 +37,11 @@ exprToPython expr =
             (parens <|
               S.join ", " <|
                 L.map exprToPython args)
+      DictLiteral dict ->
+          let items = D.toList dict
+                |> L.map (\(k, v) -> (toString k) ++ ": " ++ (exprToPython v))
+                |> S.join ", "
+          in "{" ++ items ++ "}"
       BinOp op left right ->
           "(" ++
             (exprToPython left) ++

@@ -15,6 +15,8 @@ noDependencies graph =
       |> D.toList
       |> L.map (\(k, posNode) -> ([k], posNode.node))
 
+-- BUG: doesn't seem to get all connected components (?)
+-- don't see why tho
 topSort : Graph -> List (NodePath, Node)
 topSort graph =
     let recurse newGraph list =
@@ -44,14 +46,14 @@ inPortToString (nodePath, slot) =
 outSlotToString : OutSlotId -> String
 outSlotToString slotId =
     case slotId of
-      ApResultSlot name -> name
-      IfResultSlot -> "result"
-      FuncValueSlot -> "func"
+      ApResultSlot name -> "_" ++ name
+      IfResultSlot -> "_result"
+      FuncValueSlot -> ""
 
 -- TODO factor out to nodePathToString
 outPortToString : OutPortId -> String
 outPortToString (nodePath, slot) =
-    (nodePathToString nodePath) ++ "_" ++ (outSlotToString slot)
+    (nodePathToString nodePath) ++ (outSlotToString slot)
 
 getSrcPort : Graph -> InPortId -> Maybe OutPortId
 getSrcPort graph (nodePath, slotId) =
@@ -81,6 +83,8 @@ nodeToStmt graph (nodePath, node) =
                          }
       IfNode ->
           -- TODO: 4 real
+          -- since we're thinking of this as an expression, should assign 
+          -- variable for its result
           AST.IfStmt { cond = AST.IntLit 2
                      , ifBlock = []
                      , elseBlock = []
@@ -92,12 +96,21 @@ nodeToStmt graph (nodePath, node) =
                       , body = []
                       }
 
+makeReturnStmt : Graph -> AST.Statement
+makeReturnStmt graph =
+    freeOutPorts graph
+      |> L.map (\op -> let var = outPortToString op
+                       in (var, AST.Variable var))
+      |> D.fromList
+      |> AST.DictLiteral
+      |> AST.Return
+
 -- TODO: this will always be a FuncDef, not just any statement
 toAst : String -> Graph -> AST.Statement
 toAst funcName graph =
-    let nodeList : List (NodePath, Node)
-        nodeList = topSort graph
+    let bodyStmts = topSort graph |> L.map (nodeToStmt graph)
+        returnStmt = makeReturnStmt graph
     in AST.FuncDef { name = funcName
                    , args = L.map inPortToString <| freeInPorts graph
-                   , body = L.map (nodeToStmt graph) nodeList
+                   , body = bodyStmts ++ [returnStmt]
                    }

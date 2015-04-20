@@ -259,6 +259,14 @@ inSlots node =
       IfNode -> [IfCondSlot, IfTrueSlot, IfFalseSlot]
       LambdaNode _ -> []
 
+outSlots : Node -> List OutSlotId
+outSlots node =
+    case node of
+      ApNode attrs -> L.map ApResultSlot attrs.results
+      IfNode -> [IfResultSlot]
+      LambdaNode _ -> [] -- never really want to return this
+
+-- TODO: annoyingly repetitive, again
 freeInPorts : Graph -> List InPortId
 freeInPorts graph =
     let takenInPorts = L.map .to graph.edges
@@ -267,3 +275,12 @@ freeInPorts graph =
               |> L.concatMap (\(nodeId, posNode) -> inSlots posNode.node
                                 |> L.map (\slot -> ([nodeId], slot)))
     in allInPorts |> L.filter (\ip -> not <| ip `L.member` takenInPorts)
+
+freeOutPorts : Graph -> List OutPortId
+freeOutPorts graph =
+    let takenOutPorts = L.map .from graph.edges -- can be dups, but that's ok
+        allOutPorts =
+            D.toList graph.nodes
+              |> L.concatMap (\(nodeId, posNode) -> outSlots posNode.node
+                                |> L.map (\slot -> ([nodeId], slot)))
+    in allOutPorts |> L.filter (\ip -> not <| ip `L.member` takenOutPorts)
