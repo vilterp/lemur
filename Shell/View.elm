@@ -48,6 +48,8 @@ topSection =
 
 -- ACTION BAR
 
+-- TODO: move into own file
+
 actionBar : Html
 actionBar =
     div
@@ -77,6 +79,8 @@ actionbarSep = div [ class "actionbar-vertsep" ] []
 
 -- CENTER SECTION
 
+-- TODO: tabs. move to own file.
+
 centerSection : State -> Html
 centerSection state =
     div
@@ -93,7 +97,7 @@ centerSection state =
               [ id "canvas-viewport"
               , style [("width", "100%"), ("height", "100%")]
               ]
-              [GE.view state.graphState state.editorLoc.dims]
+              [GE.view state.graphState]
           ]
       ]
 
@@ -103,6 +107,8 @@ tab elem selected =
   in div [ class className ] [ elementLabel elem ]
 
 -- RIGHT SECTION
+
+-- TODO: maybe unnecessary?
 
 rightSection : Html
 rightSection =

@@ -45,6 +45,9 @@ type Node = ApNode ApNodeAttrs
 type alias ApNodeAttrs = { title : String, params : List String, results : List String }
 type alias LambdaNodeAttrs = { nodes : NodeDict, dims : Dims }
 
+emptyLambdaNode =
+    LambdaNode { nodes = D.empty, dims = { width = 200, height = 200 } }
+
 type alias Edge = { from : OutPortId, to : InPortId }
 
 type LambdaState = NormalLS | ValidNodeOverLS | InvalidNodeOverLS

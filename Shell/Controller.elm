@@ -9,9 +9,10 @@ import Shell.Model (..)
 update : Update -> State -> State
 update up state =
   case up of
-    ElemPanelUpdate action -> { state | sidebarState <- sidebarUpdate action state.sidebarState }
-    MouseUpdate mouseUp -> { state | graphState <- GE.update mouseUp state.graphState
-                                   , editorLoc <- fst mouseUp }
+    ElemPanelUpdate action ->
+        { state | sidebarState <- sidebarUpdate action state.sidebarState }
+    GraphEditorUpdate evt ->
+        { state | graphState <- GE.update evt state.graphState }
     NoOp -> state
 
 sidebarUpdate : SidebarAction -> SidebarState -> SidebarState

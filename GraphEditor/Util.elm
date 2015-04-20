@@ -3,6 +3,8 @@ module GraphEditor.Util where
 import List as L
 import Set as S
 
+import Debug
+
 intercalate : List a -> List (List a) -> List a
 intercalate sep xs = L.concat <| L.intersperse sep xs
 
@@ -17,3 +19,9 @@ startsWith a prefix =
 multiUnion : List (S.Set comparable) -> S.Set comparable
 multiUnion sets =
     L.foldl (\s union -> s `S.union` union) S.empty sets
+
+getOrCrash : Result String r -> r
+getOrCrash res =
+    case res of
+      Err e -> Debug.crash e
+      Ok r -> r

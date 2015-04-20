@@ -5,32 +5,28 @@ import Diagrams.Wiring as DW
 import Debug
 
 import GraphEditor as GE
-import GraphEditor.Model as GEM
 import GraphEditor.TestData as GETD
 
-type Update = ElemPanelUpdate SidebarAction
-            | MouseUpdate (DW.CollageLocation, DW.PrimMouseEvent)
-            | NoOp
+type Update
+    = ElemPanelUpdate SidebarAction
+    | GraphEditorUpdate GE.GraphEditorEvt
+    | NoOp
 
-type alias State = { sidebarState : SidebarState, graphState : GE.State, editorLoc : DW.CollageLocation }
+-- TODO: move CollageLocation to GraphEditor state
+type alias State =
+    { sidebarState : SidebarState
+    , graphState : GE.State
+    }
 
 emptyState =
     { sidebarState = emptySidebarState
     , graphState = GE.initState GETD.initState
-      -- BUG: this is specific to my 13" macbook pro screen, with full screen chrome.
-      -- need to look at window dims on startup
-    , editorLoc = editorLocFunc { width = 1280, height = 701 }
     }
 
--- welp, this shouldn't really be here, but..
--- BUG: 
-editorLocFunc : DW.CollageLocFunc
-editorLocFunc windowDims =
-    let d = Debug.log "dims" windowDims
-    in { offset = (252, 101), dims = { width = windowDims.width - 501, height = windowDims.height - 101 } }
-
-
-type alias SidebarState = { modules : List SidebarModule, selection : Maybe SidebarSelection }
+type alias SidebarState =
+    { modules : List SidebarModule
+    , selection : Maybe SidebarSelection
+    }
 
 emptySidebarState = { modules = [], selection = Nothing }
 
