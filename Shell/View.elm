@@ -1,16 +1,16 @@
 module Shell.View where
 
 import List as L
-import Html (..)
-import Html.Attributes (..)
-import Html.Events (..)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import LocalChannel as LC
 import Signal as S
 
 import Diagrams.Wiring as DW
 
 import GraphEditor
-import Shell.Model (..)
+import Shell.Model exposing (..)
 import Shell.ActionBar as ActionBar
 
 view : S.Channel Update -> State -> Html

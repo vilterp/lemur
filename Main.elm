@@ -1,14 +1,14 @@
 module Main where
 
-import Shell.Model (..)
-import Shell.View (..)
-import Shell.Controller (..)
-import Shell.TestData (..)
+import Shell.Model exposing (..)
+import Shell.View exposing (..)
+import Shell.Controller exposing (..)
+import Shell.TestData exposing (..)
 
 import Diagrams.Wiring as DW
 import GraphEditor as GE
 
-import Html (..)
+import Html exposing (..)
 import Signal as S
 
 htmlUpdates = S.channel NoOp

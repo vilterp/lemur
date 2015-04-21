@@ -9,21 +9,21 @@ import Maybe as M
 
 import Debug
 
-import Diagrams.Core (..)
-import Diagrams.Align (..)
-import Diagrams.Pad (..)
-import Diagrams.Geom (..)
-import Diagrams.Bezier (..)
-import Diagrams.Layout (..)
-import Diagrams.FillStroke (..)
-import Diagrams.Actions (..)
-import Diagrams.Query (..)
-import Diagrams.Debug (..)
+import Diagrams.Core exposing (..)
+import Diagrams.Align exposing (..)
+import Diagrams.Pad exposing (..)
+import Diagrams.Geom exposing (..)
+import Diagrams.Bezier exposing (..)
+import Diagrams.Layout exposing (..)
+import Diagrams.FillStroke exposing (..)
+import Diagrams.Actions exposing (..)
+import Diagrams.Query exposing (..)
+import Diagrams.Debug exposing (..)
 
-import GraphEditor.Model (..)
-import GraphEditor.Styles (..)
-import GraphEditor.Controller (..)
-import GraphEditor.Util (..)
+import GraphEditor.Model exposing (..)
+import GraphEditor.Styles exposing (..)
+import GraphEditor.Controller exposing (..)
+import GraphEditor.Util exposing (..)
 
 -- common elements
 xGlyph : Color.Color -> Maybe Color.Color -> Diagram Tag Action
@@ -31,14 +31,14 @@ xGlyph lineColor bgColor =
   let smallLine = vline 11 { defLine | color <- lineColor, width <- 2 }
       rotLeft = rotate (-pi/4) smallLine
       rotRight = rotate (pi/4) smallLine
-      actualBgColor = M.withDefault (Color.red `withAlpha` 0) bgColor
+      -- TODO: get with alpha to work (?)
+      actualBgColor = M.withDefault (Color.red) bgColor
       bg = circle 7 <| justFill <| C.Solid actualBgColor
   in zcat [rotLeft, rotRight, bg]
 
 nodeXGlyph c = xGlyph c Nothing
 edgeXGlyph bgC = xGlyph Color.black <| Just bgC
 
--- TODO: color code based on state
 portCirc color = circle 7 (justFill <| C.Solid color)
 
 inSlotLabel : InSlotId -> String
