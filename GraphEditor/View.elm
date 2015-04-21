@@ -32,7 +32,7 @@ xGlyph lineColor bgColor =
       rotLeft = rotate (-pi/4) smallLine
       rotRight = rotate (pi/4) smallLine
       -- TODO: get with alpha to work (?)
-      actualBgColor = M.withDefault (Color.red) bgColor
+      actualBgColor = M.withDefault (Color.red |> withAlpha 0) bgColor
       bg = circle 7 <| justFill <| Solid actualBgColor
   in zcat [rotLeft, rotRight, bg]
 
