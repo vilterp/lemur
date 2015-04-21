@@ -4,7 +4,6 @@ import List as L
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import LocalChannel as LC
 import Signal as S
 
 import Diagrams.Wiring as DW
@@ -13,9 +12,9 @@ import GraphEditor
 import Shell.Model exposing (..)
 import Shell.ActionBar as ActionBar
 
-view : S.Channel Update -> State -> Html
+view : S.Address Update -> State -> Html
 view updates state =
-    let sidebarUpdates = LC.create ElemPanelUpdate updates
+    let sidebarUpdates = S.forwardTo updates ElemPanelUpdate
     in div
         [ id "app" ]
         [ topSection
@@ -98,7 +97,7 @@ rightSection =
 -- TODO: move to own file
 
 
-elementsPanelView : LC.LocalChannel SidebarAction -> SidebarState -> Html
+elementsPanelView : S.Address SidebarAction -> SidebarState -> Html
 elementsPanelView chan state =
     div [ id "left" ]
       [ scrollPanel
@@ -118,7 +117,7 @@ elementsPanelView chan state =
            in L.map3 (moduleSectionView chan) state.modules indices selections)
       ]
 
-moduleSectionView : LC.LocalChannel SidebarAction -> SidebarModule -> Int -> Maybe Int -> Html
+moduleSectionView : S.Address SidebarAction -> SidebarModule -> Int -> Maybe Int -> Html
 moduleSectionView chan {name, elements} modIdx selection =
     div
       [ class "panel-contents-section" ]
@@ -140,10 +139,12 @@ moduleSectionView chan {name, elements} modIdx selection =
           ]
       ]
 
-modElementView : LC.LocalChannel SidebarAction -> ModuleElement -> SidebarElemPos -> Bool -> Html
+modElementView : S.Address SidebarAction -> ModuleElement -> SidebarElemPos -> Bool -> Html
 modElementView chan el pos selected =
     let className = "module-element" ++ (if selected then " selected" else "")
-    in li [ class className, onClick (LC.send chan <| ClickOn pos) ] [ elementLabel el ]
+    in li
+        [ class className, onClick chan <| ClickOn pos ]
+        [ elementLabel el ]
 
 panel : List Html -> List Html -> Html
 panel header_elems child_elems =

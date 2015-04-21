@@ -33,13 +33,13 @@ xGlyph lineColor bgColor =
       rotRight = rotate (pi/4) smallLine
       -- TODO: get with alpha to work (?)
       actualBgColor = M.withDefault (Color.red) bgColor
-      bg = circle 7 <| justFill <| C.Solid actualBgColor
+      bg = circle 7 <| justFill <| Solid actualBgColor
   in zcat [rotLeft, rotRight, bg]
 
 nodeXGlyph c = xGlyph c Nothing
 edgeXGlyph bgC = xGlyph Color.black <| Just bgC
 
-portCirc color = circle 7 (justFill <| C.Solid color)
+portCirc color = circle 7 (justFill <| Solid color)
 
 inSlotLabel : InSlotId -> String
 inSlotLabel sid =
@@ -94,7 +94,7 @@ nodeDiagram nodePath state titleRow slotGroups color =
             case group of
               InputGroup ids -> L.map (\inSlotId -> inSlot state (nodePath, inSlotId)) ids
               OutputGroup ids -> L.map (\outSlotId -> outSlot state (nodePath, outSlotId)) ids
-    in background (fillAndStroke (C.Solid color) defaultStroke) <|
+    in background (fillAndStroke (Solid color) defaultStroke) <|
           layout <| [titleRow, hrule nodeTopDivider 3]
                       ++ (intercalate [hrule nodeMiddleDivider 3] (L.map viewGroup slotGroups))
 
@@ -126,7 +126,7 @@ viewLambdaNode node nodePath state =
         subCanvas = centered <| tagWithActions Canvas (canvasActions nodePath state.dragState) <|
                       pad 7 <| zcat [nodes, rect node.dims.width node.dims.height invisible]
         lState = lambdaState state nodePath
-    in background (fillAndStroke (C.Solid <| lambdaNodeBgColor lState) defaultStroke) <|
+    in background (fillAndStroke (Solid <| lambdaNodeBgColor lState) defaultStroke) <|
         layout <| [titleRow, hrule nodeTopDivider 3, subCanvas]
 
 -- TODO: padding is awkward

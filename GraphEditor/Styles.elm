@@ -31,7 +31,7 @@ portStateColorCode st = case st of
 lambdaNodeBgColor : LambdaState -> Color.Color
 lambdaNodeBgColor state =
     case state of
-      NormalLS -> Color.RGBA 220 255 255 1 -- cyan
+      NormalLS -> Color.rgba 220 255 255 1 -- cyan
       ValidNodeOverLS -> Color.lightGreen
       InvalidNodeOverLS -> Color.lightRed
 
