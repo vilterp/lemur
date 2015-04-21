@@ -1,6 +1,6 @@
 module GraphEditor.Model where
 
-import Diagrams.Geom (Point, Dims)
+import Diagrams.Geom exposing (Point, Dims)
 
 import Dict as D
 import Set
@@ -9,7 +9,7 @@ import Result as R
 import Maybe as M
 import Debug
 
-import GraphEditor.Util (..)
+import GraphEditor.Util exposing (..)
 
 -- data structures
 

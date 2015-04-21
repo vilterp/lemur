@@ -1,6 +1,6 @@
 module Shell.TestData where
 
-import Shell.Model (..)
+import Shell.Model exposing (..)
 
 stdlib : SidebarModule
 stdlib =

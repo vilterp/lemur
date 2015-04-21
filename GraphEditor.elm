@@ -13,7 +13,7 @@ import Diagrams.Wiring as DW
 import GraphEditor.Model as GEM
 import GraphEditor.View as GEV
 import GraphEditor.Controller as GEC
-import GraphEditor.Util (..)
+import GraphEditor.Util exposing (..)
 
 type alias State =
     { intState : DI.InteractionState GEM.State GEM.Tag GEM.Action
