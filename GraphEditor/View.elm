@@ -55,7 +55,7 @@ inSlot state (nodePath, slotId) =
     in flexRight <| hcat [ tagWithActions (InPortT slotId) (inPortActions state (nodePath, slotId))
                               <| portCirc stateColor
                          , hspace 5
-                         , text (inSlotLabel slotId) slotLabelStyle
+                         , text (inSlotLabel slotId) slotLabelStyle |> showBBox
                          ]
 
 outSlotLabel : OutSlotId -> String
