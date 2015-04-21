@@ -1,8 +1,8 @@
 module Shell.ActionBar where
 
-import Html (..)
-import Html.Attributes (..)
-import Html.Events (..)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 
 import Signal as S
 import List as L
@@ -22,24 +22,24 @@ getABState smState =
     [ [{ name = "Add Lambda", action = SM.GraphEditorUpdate GE.AddLambda }]
     ]
 
-view : S.Channel SM.Update -> SM.State -> Html
+view : S.Address SM.Update -> SM.State -> Html
 view chan state =
     getABState state
       |> L.map (viewButtonGroup chan)
       |> L.intersperse buttonGroupSep
       |> div [ id "action-bar" ]
 
-viewButtonGroup : S.Channel SM.Update -> ButtonGroup -> Html
+viewButtonGroup : S.Address SM.Update -> ButtonGroup -> Html
 viewButtonGroup chan bg =
     L.map (viewButton chan) bg
       |> div [ class "action-bar-button-group" ]
 
 -- Later: KB shortcut (for display), icon, callback (?)
-viewButton : S.Channel SM.Update -> Button -> Html
+viewButton : S.Address SM.Update -> Button -> Html
 viewButton chan button =
     div
       [ class "actionbar-button"
-      , onClick <| S.send chan button.action ]
+      , onClick chan button.action ]
       [ text button.name ]
 
 buttonGroupSep : Html

@@ -1,6 +1,6 @@
 module GraphEditor.TestData where
 
-import GraphEditor.Model (..)
+import GraphEditor.Model exposing (..)
 
 import Dict as D
 import List as L
