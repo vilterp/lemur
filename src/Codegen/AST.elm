@@ -4,7 +4,7 @@ import Dict as D
 import List as L
 import String as S
 
-import Codegen.PrettyPrint (..)
+import Codegen.PrettyPrint exposing (..)
 
 type Expr
     = IntLit Int

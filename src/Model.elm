@@ -1,6 +1,14 @@
 module Model where
 
+import Diagrams.Geom exposing (Point, Dims)
+
 import Dict as D
+import Set
+import List as L
+import Result as R
+import Maybe as M
+
+import Util exposing (..)
 
 -- MODULE
 
@@ -8,40 +16,69 @@ type alias ModName = String
 type alias FuncName = String
 type alias FuncId = FuncName -- someday: within a module
 
+-- assumes no duplicate names enforced by editor
 type alias Module =
     { name : ModName
-    , builtinFuncs : D.Dict String BuiltinFunc
-    , userFuncs : D.Dict String UserFunc
+    , builtinFuncs : D.Dict String Func
+    , userFuncs : D.Dict String Func
     }
 
-type alias Func a =
-    { a | name : String
-        , params : a -> List String -- TODO: make these lazies instead of functions? yess
-        , returnVals : a -> List String
-        }
+-- TODO: can't figure out rn how to use extensible records here
+type Func
+    = BuiltinFunc { name : String
+                  , pythonCode : String
+                  }
+    | UserFunc { name : String
+               , graph : Graph
+               , paramNames : List String
+               , returnValNames : List String
+               , latestApId : Int
+               , latestLambdaId : Int
+               }
 
 -- TODO: user func args are computed from graph
 
-type alias BuiltinFunc =
-    Func { pythonCode : String }
+emptyBuiltinFunc : String -> Func
+emptyBuiltinFunc name =
+    BuiltinFunc { name = name
+                , pythonCode = "def " ++ name ++ "():\n  return None"
+                }
 
-builtinFuncParams : BuiltinFunc -> List String
-builtinFuncParams _ = [] -- TODO: parse python
+emptyUserFunc : FuncName -> Func
+emptyUserFunc name =
+    UserFunc { name = name
+             , graph = emptyGraph
+             , paramNames = []
+             , returnValNames = []
+             , latestApId = 0
+             , latestLambdaId = 0
+             }
 
-builtinFuncReturnVals : BuiltinFunc -> List String
-builtinFuncReturnVals _ = [] -- TODO: parse python
+funcParams : Func -> List String
+funcParams func =
+    case func of
+      BuiltinFunc attrs -> [] -- TODO: parse python
+      UserFunc attrs -> attrs.paramNames
 
-type alias UserFunc =
-    Func { graph : Graph
-         , paramNames : List String
-         , returnValNames : List String
-         }
+funcReturnVals : Func -> List String
+funcReturnVals func =
+    case func of
+      BuiltinFunc attrs -> [] -- TODO: parse (?)
+      UserFunc attrs -> attrs.returnValNames
 
-userFuncParams : UserFunc -> List String
-userFuncParams uf = uf.paramNames
+-- TODO: can't figure out how to use extensible records here
+funcName : Func -> ModName
+funcName func =
+    case func of
+      UserFunc attrs -> attrs.name
+      BuiltinFunc attrs -> attrs.name
 
-userFuncReturnVals : UserFunc -> List String
-userFuncReturnVals uf = uf.returnValNames
+-- assumes no duplicate names
+getFunc : Module -> FuncName -> Maybe Func
+getFunc mod name =
+    case D.get name mod.builtinFuncs of
+      Just bif -> Just bif
+      Nothing -> D.get name mod.userFuncs
 
 -- GRAPH
 
@@ -190,37 +227,38 @@ anyNormalPortsUsed graph nodePath =
 
 -- in & out ports
 
-inSlots : ModuleSet -> Node -> List InSlotId
-inSlots modSet node =
+inSlots : Module -> Node -> List InSlotId
+inSlots mod node =
     case node of
       ApNode funcId -> L.map ApParamSlot [] -- TODO: need to look this up in function definition
       IfNode -> [IfCondSlot, IfTrueSlot, IfFalseSlot]
       LambdaNode _ -> []
 
-outSlots : ModuleSet -> Node -> List OutSlotId
-outSlots modSet node =
+outSlots : Module -> Node -> List OutSlotId
+outSlots mod node =
     case node of
-      ApNode attrs -> L.map ApResultSlot [] -- TODO: need to look this up in function definition
+      ApNode attrs ->
+        L.map ApResultSlot [] -- TODO: need to look this up in function definition
       IfNode -> [IfResultSlot]
       LambdaNode _ -> [] -- never really want to return this
 
 -- for codegen, there can be no free in or out ports.
 -- free in and out ports are an invalid state.
 -- TODO: annoyingly repetitive, again
-freeInPorts : ModuleSet -> Graph -> List InPortId
-freeInPorts modSet graph =
+freeInPorts : Module -> Graph -> List InPortId
+freeInPorts mod graph =
     let takenInPorts = L.map .to graph.edges
         allInPorts =
             D.toList graph.nodes
-              |> L.concatMap (\(nodeId, posNode) -> inSlots modSet posNode.node
+              |> L.concatMap (\(nodeId, posNode) -> inSlots mod posNode.node
                                 |> L.map (\slot -> ([nodeId], slot)))
     in allInPorts |> L.filter (\ip -> not <| ip `L.member` takenInPorts)
 
-freeOutPorts : ModuleSet -> Graph -> List OutPortId
-freeOutPorts modSet graph =
+freeOutPorts : Module -> Graph -> List OutPortId
+freeOutPorts mod graph =
     let takenOutPorts = L.map .from graph.edges -- can be dups, but that's ok
         allOutPorts =
             D.toList graph.nodes
-              |> L.concatMap (\(nodeId, posNode) -> outSlots modSet posNode.node
+              |> L.concatMap (\(nodeId, posNode) -> outSlots mod posNode.node
                                 |> L.map (\slot -> ([nodeId], slot)))
     in allOutPorts |> L.filter (\ip -> not <| ip `L.member` takenOutPorts)

@@ -6,7 +6,7 @@ import String
 
 import Debug
 
-import GraphEditor.Model (..)
+import GraphEditor.Model exposing (..)
 import Codegen.AST as AST
 
 noDependencies : Graph -> List (NodePath, Node)

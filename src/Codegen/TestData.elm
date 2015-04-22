@@ -1,6 +1,6 @@
 module Codegen.TestData where
 
-import Codegen.AST (..)
+import Codegen.AST exposing (..)
 
 fib =
   FuncDef

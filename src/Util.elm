@@ -1,4 +1,4 @@
-module GraphEditor.Util where
+module Util where
 
 import List as L
 import Set as S
@@ -25,3 +25,9 @@ getOrCrash res =
     case res of
       Err e -> Debug.crash e
       Ok r -> r
+
+getMaybeOrCrash : String -> Maybe a -> a
+getMaybeOrCrash msg m=
+    case m of
+      Just x -> x
+      Nothing -> Debug.crash msg

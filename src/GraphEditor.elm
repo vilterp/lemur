@@ -15,7 +15,7 @@ import GraphEditor.View as GEV
 import GraphEditor.Controller as GEC
 import GraphEditor.Util exposing (..)
 
-import Shell.Module as Module
+import Model
 
 type alias State =
     { intState : DI.InteractionState GEM.State GEM.Tag GEM.Action
@@ -27,8 +27,8 @@ type alias State =
 type GraphEditorEvt
     = MouseUpdate (DW.CollageLocation, DW.PrimMouseEvent)
     | AddLambda
-    | AddBuiltin (Module.BuiltinFunc)
-    | AddUserFunc (Module.UserFunc)
+    | AddBuiltin (Model.BuiltinFunc)
+    | AddUserFunc (Model.UserFunc)
 
 initState : GEM.State -> State
 initState state =
@@ -80,7 +80,7 @@ addNodeToState posNode state =
                                     GEM.addNode [newId] newPosNode geState.graph })
                             state.intState }
 
-addFuncNode : Module.Func a -> State -> State
+addFuncNode : Model.Func a -> State -> State
 addFuncNode func state =
     let newNode = ApNode { title = func.name
                          , params = func.params
