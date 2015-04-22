@@ -1,6 +1,6 @@
 module GraphEditor.Model where
 
-import Diagrams.Geom (Point, Dims)
+import Diagrams.Geom exposing (Point, Dims)
 
 import Dict as D
 import Set
@@ -9,7 +9,7 @@ import Result as R
 import Maybe as M
 import Debug
 
-import GraphEditor.Util (..)
+import GraphEditor.Util exposing (..)
 
 -- data structures
 
@@ -41,13 +41,13 @@ type Node = ApNode ApNodeAttrs
           | IfNode
           | LambdaNode LambdaNodeAttrs
 
--- TODO: this attrs thing is awkward
 type alias ApNodeAttrs = { title : String, params : List String, results : List String }
 type alias LambdaNodeAttrs = { nodes : NodeDict, dims : Dims }
 
 emptyLambdaNode =
     LambdaNode { nodes = D.empty, dims = { width = 200, height = 200 } }
 
+-- TODO: should prob be src & dst
 type alias Edge = { from : OutPortId, to : InPortId }
 
 type LambdaState = NormalLS | ValidNodeOverLS | InvalidNodeOverLS
@@ -251,3 +251,36 @@ canBeDroppedInLambda : Graph -> NodePath -> NodePath -> Bool
 canBeDroppedInLambda graph lambdaPath draggingPath =
     (L.isEmpty <| edgesFrom graph draggingPath)
         && (L.isEmpty <| edgesTo graph draggingPath)
+
+inSlots : Node -> List InSlotId
+inSlots node =
+    case node of
+      ApNode attrs -> L.map ApParamSlot attrs.params
+      IfNode -> [IfCondSlot, IfTrueSlot, IfFalseSlot]
+      LambdaNode _ -> []
+
+outSlots : Node -> List OutSlotId
+outSlots node =
+    case node of
+      ApNode attrs -> L.map ApResultSlot attrs.results
+      IfNode -> [IfResultSlot]
+      LambdaNode _ -> [] -- never really want to return this
+
+-- TODO: annoyingly repetitive, again
+freeInPorts : Graph -> List InPortId
+freeInPorts graph =
+    let takenInPorts = L.map .to graph.edges
+        allInPorts =
+            D.toList graph.nodes
+              |> L.concatMap (\(nodeId, posNode) -> inSlots posNode.node
+                                |> L.map (\slot -> ([nodeId], slot)))
+    in allInPorts |> L.filter (\ip -> not <| ip `L.member` takenInPorts)
+
+freeOutPorts : Graph -> List OutPortId
+freeOutPorts graph =
+    let takenOutPorts = L.map .from graph.edges -- can be dups, but that's ok
+        allOutPorts =
+            D.toList graph.nodes
+              |> L.concatMap (\(nodeId, posNode) -> outSlots posNode.node
+                                |> L.map (\slot -> ([nodeId], slot)))
+    in allOutPorts |> L.filter (\ip -> not <| ip `L.member` takenOutPorts)

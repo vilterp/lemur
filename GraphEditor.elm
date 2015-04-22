@@ -13,7 +13,7 @@ import Diagrams.Wiring as DW
 import GraphEditor.Model as GEM
 import GraphEditor.View as GEV
 import GraphEditor.Controller as GEC
-import GraphEditor.Util (..)
+import GraphEditor.Util exposing (..)
 
 type alias State =
     { intState : DI.InteractionState GEM.State GEM.Tag GEM.Action
@@ -27,7 +27,7 @@ type GraphEditorEvt
 
 initState : GEM.State -> State
 initState state =
-    { intState = DI.initInteractState GEV.viewGraph state
+    { intState = DI.initInteractState GEC.update GEV.viewGraph state
     , lambdaId = 0
     -- BUG: this is specific to my 13" macbook pro screen, with full screen chrome.
     -- need to look at window dims on startup
@@ -54,8 +54,7 @@ update : GraphEditorEvt -> State -> State
 update evt state =
     case evt of
       MouseUpdate mouseEvt ->
-          -- (CollageLocation, PrimMouseEvent) -> InteractionState m t a -> InteractionState m t a
-          { state | intState <- (DI.makeFoldUpdate GEC.update GEV.viewGraph) mouseEvt state.intState }
+          { state | intState <- DI.update mouseEvt state.intState }
       AddLambda ->
           let newNode = GEM.emptyLambdaNode
               newId = "lambda" ++ (toString state.lambdaId)

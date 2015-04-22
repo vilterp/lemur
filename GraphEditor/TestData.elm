@@ -1,6 +1,6 @@
 module GraphEditor.TestData where
 
-import GraphEditor.Model (..)
+import GraphEditor.Model exposing (..)
 
 import Dict as D
 import List as L
@@ -17,7 +17,7 @@ bazPosNode = { node = bazNode, pos = (100, -200), id = "baz" }
 barNode = ApNode { title = "Bar", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
 barPosNode = { node = barNode, pos = (100, 100), id = "bar" }
 
-lambdaFooEdge = { from = (["lambda"], FuncValueSlot), to = (["foo"], ApParamSlot "InC") }
+lambdaFooEdge = { from = (["lambda0"], FuncValueSlot), to = (["foo"], ApParamSlot "InC") }
 fooBarEdge = { from = (["foo"], ApResultSlot "out1"), to = (["bar"], ApParamSlot "InA") }
 barBazEdge = { from = (["bar"], ApResultSlot "out1"), to = (["baz"], ApParamSlot "InA") }
 bazIfEdge = { from = (["baz"], ApResultSlot "out1"), to = (["if1"], IfCondSlot) }
@@ -28,14 +28,14 @@ subBazPosNode = { node = subBazNode, pos = (-50, -50), id = "baz1" }
 subBarNode = ApNode { title = "SubBar", params = ["InA", "InB", "InC"], results = ["out1", "out2"] }
 subBarPosNode = { node = subBarNode, pos = (50, 50), id = "bar1" }
 
-subBarSubBazEdge = { from = (["lambda", "bar1"], ApResultSlot "out1"), to = (["lambda", "baz1"], ApParamSlot "InA") }
+subBarSubBazEdge = { from = (["lambda0", "bar1"], ApResultSlot "out1"), to = (["lambda0", "baz1"], ApParamSlot "InA") }
 
 lambdaNode =
     LambdaNode
       { nodes = (D.fromList [ (subBarPosNode.id, subBarPosNode), (subBazPosNode.id, subBazPosNode) ])
       , dims = { width = 300, height = 200 }
       }
-lambdaPosNode = { node = lambdaNode, pos = (-450, -100), id = "lambda" }
+lambdaPosNode = { node = lambdaNode, pos = (-450, -100), id = "lambda0" }
 
 ifNode = IfNode
 ifPosNode = { id = "if1", node = ifNode, pos = (-200, 300) }

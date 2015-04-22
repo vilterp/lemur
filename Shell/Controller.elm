@@ -4,7 +4,7 @@ import Debug
 
 import GraphEditor as GE
 
-import Shell.Model (..)
+import Shell.Model exposing (..)
 
 update : Update -> State -> State
 update up state =
