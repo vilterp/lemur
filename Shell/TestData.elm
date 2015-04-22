@@ -1,39 +1,37 @@
 module Shell.TestData where
 
 import Shell.Model exposing (..)
+import Shell.Module exposing (..)
+import GraphEditor.Model as GEM
 
-stdlib : SidebarModule
-stdlib =
-    { name = "StdLib"
-    , elements =
-        [ { typ = Workflow, name = "Demo"}
-        , { typ = App, name = "Fold"}
-        , { typ = App, name = "Filter"}
-        , { typ = App, name = "Map"}
-        , { typ = App, name = "Join"}
-        , { typ = App, name = "Split"}
-        , { typ = Datatype, name = "List"}
-        , { typ = Datatype, name = "Map"}
-        , { typ = Datatype, name = "Queue"}
-        , { typ = Datatype, name = "Stack"}
-        ]
+import Dict as D
+
+dumbTestMod : Module
+dumbTestMod =
+    { name = "DumbTest"
+    , builtinFuncs =
+        D.fromList
+            [ ("someList", { name = "someList"
+                           , params = []
+                           , pythonCode = "return ['foo', 'bar', 'baz']"
+                           })
+            , ("map", { name = "map"
+                      , params = ["function", "list"]
+                      , pythonCode = "return map(function, list)"
+                      })
+            , ("addExcl", { name = "addExcl"
+                          , params = ["str"]
+                          , pythonCode = "return str + '!'"
+                          })
+            , ("commaJoin", { name = "commaJoin"
+                            , params = ["list"]
+                            , pythonCode = "return ', '.join(list)"
+                            })
+            ]
+    , userFuncs = D.fromList [("main", GEM.emptyGraph)]
     }
 
-easysim : SidebarModule
-easysim =
-    { name = "EasySIM"
-    , elements =
-        [ { typ = Workflow, name = "Demo"}
-        , { typ = App, name = "Convert Weather"}
-        , { typ = App, name = "Convert Soil"}
-        , { typ = Datatype, name = "PSims Weather"}
-        , { typ = Datatype, name = "DSSAT Weather"}
-        , { typ = Datatype, name = "PSims Soil"}
-        , { typ = Datatype, name = "DSSAT Soil"}
-        ]
-    }
-
-sidebarModules = [easysim, stdlib]
+sidebarModules = [dumbTestMod]
 
 initSidebarState = { emptySidebarState | modules <- sidebarModules }
 

@@ -1,9 +1,6 @@
 module Main where
 
-import Shell.Model exposing (..)
-import Shell.View exposing (..)
-import Shell.Controller exposing (..)
-import Shell.TestData exposing (..)
+import Shell
 
 import Diagrams.Wiring as DW
 import GraphEditor as GE
@@ -20,8 +17,8 @@ updates = S.merge (S.map (GraphEditorUpdate << GE.MouseUpdate) mouseUpdates)
                   (htmlUpdates.signal)
 
 state : Signal State
-state = S.foldp update initState updates
+state = S.foldp Shell.update Shell.initState updates
 
 main : Signal Html
 main =
-  S.map (view htmlUpdates.address) state
+  S.map (Shell.view htmlUpdates.address) state

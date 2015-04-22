@@ -15,20 +15,26 @@ import GraphEditor.View as GEV
 import GraphEditor.Controller as GEC
 import GraphEditor.Util exposing (..)
 
+import Shell.Module as Module
+
 type alias State =
     { intState : DI.InteractionState GEM.State GEM.Tag GEM.Action
     , editorLoc : DW.CollageLocation
     , lambdaId : Int
+    , apId : Int
     }
 
 type GraphEditorEvt
     = MouseUpdate (DW.CollageLocation, DW.PrimMouseEvent)
     | AddLambda
+    | AddBuiltin (Module.BuiltinFunc)
+    | AddUserFunc (Module.UserFunc)
 
 initState : GEM.State -> State
 initState state =
     { intState = DI.initInteractState GEC.update GEV.viewGraph state
     , lambdaId = 0
+    , apId = 0
     -- BUG: this is specific to my 13" macbook pro screen, with full screen chrome.
     -- need to look at window dims on startup
     , editorLoc = editorLocFunc { width = 1280, height = 701 }
@@ -59,12 +65,33 @@ update evt state =
           let newNode = GEM.emptyLambdaNode
               newId = "lambda" ++ (toString state.lambdaId)
               newPosNode = { pos = defaultPos, id = newId, node = newNode }
-          in { state | intState <- DI.updateModel
-                          (\geState ->
-                              { geState | graph <- getOrCrash <| GEM.addNode [newId] newPosNode geState.graph })
-                          state.intState
-                     , lambdaId <- state.lambdaId + 1
+              withNewNode = addNodeToState newPosNode state
+          in { withNewNode | lambdaId <- state.lambdaId + 1 }
+      AddBuiltin builtinFunc ->
+          addFuncNode builtinFunc state
+      AddUserFunc userFunc ->
+          addFuncNode userFunc state
+
+addNodeToState : GEM.PosNode -> State -> State
+addNodeToState posNode state =
+    { state | intState <- DI.updateModel
+                            (\geState ->
+                                { geState | graph <- getOrCrash <|
+                                    GEM.addNode [newId] newPosNode geState.graph })
+                            state.intState }
+
+addFuncNode : Module.Func a -> State -> State
+addFuncNode func state =
+    let newNode = ApNode { title = func.name
+                         , params = func.params
+                         , results = ["result"]
+                         }
+        newPosNode = { pos = defaultPos
+                     , id = "ap" ++ (toString state.apId)
+                     , node = newNode
                      }
+    in { state | graph <- addNodeToState newPosNode state
+               , apId <- apId + 1 }
 
 view : State -> Html.Html
 view state =
