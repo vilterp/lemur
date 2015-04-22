@@ -26,14 +26,16 @@ type alias Module =
 -- TODO: can't figure out rn how to use extensible records here
 type Func
     = BuiltinFunc { name : String
+                  , params : List String
+                  , returnVals : List String
                   , pythonCode : String
                   }
     | UserFunc { name : String
                , graph : Graph
-               , paramNames : List String
-               , returnValNames : List String
-               , latestApId : Int
-               , latestLambdaId : Int
+               , params : List String
+               , returnVals : List String
+               , nextApId : Int
+               , nextLambdaId : Int
                }
 
 -- TODO: user func args are computed from graph
@@ -41,30 +43,32 @@ type Func
 emptyBuiltinFunc : String -> Func
 emptyBuiltinFunc name =
     BuiltinFunc { name = name
-                , pythonCode = "def " ++ name ++ "():\n  return None"
+                , pythonCode = "return None"
+                , params = []
+                , returnVals = ["result"]
                 }
 
 emptyUserFunc : FuncName -> Func
 emptyUserFunc name =
     UserFunc { name = name
              , graph = emptyGraph
-             , paramNames = []
-             , returnValNames = []
-             , latestApId = 0
-             , latestLambdaId = 0
+             , params = []
+             , returnVals = []
+             , nextApId = 0
+             , nextLambdaId = 0
              }
 
 funcParams : Func -> List String
 funcParams func =
     case func of
-      BuiltinFunc attrs -> [] -- TODO: parse python
-      UserFunc attrs -> attrs.paramNames
+      BuiltinFunc attrs -> attrs.params
+      UserFunc attrs -> attrs.params
 
 funcReturnVals : Func -> List String
 funcReturnVals func =
     case func of
-      BuiltinFunc attrs -> [] -- TODO: parse (?)
-      UserFunc attrs -> attrs.returnValNames
+      BuiltinFunc attrs -> attrs.returnVals
+      UserFunc attrs -> attrs.returnVals
 
 -- TODO: can't figure out how to use extensible records here
 funcName : Func -> ModName
@@ -81,6 +85,13 @@ getFunc mod name =
       Nothing -> D.get name mod.userFuncs
 
 -- GRAPH
+
+{- TODO: mark ports as results! (and as discarded?)
+probably requires redefining in port and outport id
+as ADTs
+or NodeId as an ADT
+or having a ResultsNode and ParamsNode (the janky way)
+-}
 
 type alias NodeId = String
 type alias NodePath = List NodeId
