@@ -113,7 +113,7 @@ testGraph =
           , to = (["ap4-newlineJoin"], ApParamSlot "list")
           }
         , { from = (["lambda0", "ap1-addExcl"], ApResultSlot "added")
-          , to = (["lambda1", "ap2-addHi"], ApParamSlot "str")
+          , to = (["lambda0", "ap2-addHi"], ApParamSlot "str")
           }
         ]
     }

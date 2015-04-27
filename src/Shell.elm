@@ -12,12 +12,7 @@ import GraphEditor
 import Shell.ActionBar
 import GraphEditor.TestData as GETD
 
--- MODEL
-
-type Update
-    = ElemPanelUpdate SidebarAction
-    | GraphEditorUpdate GraphEditor.GraphEditorEvt
-    | NoOp
+import Model
 
 -- TODO: move CollaGraphEditorLocation to GraphEditor state
 type alias State =
@@ -30,27 +25,16 @@ initState =
     , graphState = GraphEditor.initState GETD.initState
     }
 
--- CONTROLLER
-
-update : Update -> State -> State
-update up state =
-  case up of
-    ElemPanelUpdate action ->
-        { state | sidebarState <- sidebarUpdate action state.sidebarState }
-    GraphEditorUpdate evt ->
-        { state | graphState <- GraphEditor.update evt state.graphState }
-    NoOp -> state
-
 -- VIEW
 
 view : S.Address Update -> State -> Html
 view updates state =
-    let sidebarUpdates = S.forwardTo updates ElemPanelUpdate
+    let elemPanelUpdates = S.forwardTo updates ElemPanelUpdate
     in div
         [ id "app" ]
         [ topSection
         , ActionBar.view updates state
-        , elementsPanelView sidebarUpdates state.sidebarState
+        , ElementsPanel.view elemPanelUpdates state.sidebarState
         , centerSection state
         , rightSection
         ]
@@ -63,7 +47,7 @@ topSection : Html
 topSection =
     div
       [ id "top" ]
-      [ div [ id "logo" ] [ text "Swift/V" ]
+      [ div [ id "logo" ] [ text "VisualFP" ]
       , div [ class "breadcrumbs" ]
           [ div [ class "breadcrumb" ] [ text "EasySIM" ]
           , div [ class "breadcrumb breadcrumb-sep" ] [ text ">" ]

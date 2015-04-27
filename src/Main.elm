@@ -7,8 +7,9 @@ import GraphEditor as GE
 
 import Html exposing (..)
 import Signal as S
+import Actions
 
-htmlUpdates = S.mailbox NoOp
+htmlUpdates = S.mailbox Actions.NoOp
 
 mouseUpdates : Signal (DW.CollageLocation, DW.PrimMouseEvent)
 mouseUpdates = DW.makeUpdateStream GE.editorLocFunc

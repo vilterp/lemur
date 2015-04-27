@@ -1,4 +1,4 @@
-module Shell.ActionBar where
+module ActionBar where
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -7,39 +7,40 @@ import Html.Events exposing (..)
 import Signal as S
 import List as L
 
-import Shell.Model as SM
-import GraphEditor as GE
+import Model
+import Actions
 
 type alias State = List ButtonGroup
 type alias ButtonGroup = List Button
 type alias Button =
     { name : String
-    , action : SM.Update
+    , action : Actions.Action
     }
 
-getABState : SM.State -> State
+getABState : Model.State -> State
 getABState smState =
-    [ [{ name = "Add Lambda", action = SM.GraphEditorUpdate GE.AddLambda }]
+    [ [{ name = "Add Lambda", action = Actions.AddLambda }]
     ]
 
-view : S.Address SM.Update -> SM.State -> Html
+view : S.Address Actions.Action -> Model.State -> Html
 view chan state =
     getABState state
       |> L.map (viewButtonGroup chan)
       |> L.intersperse buttonGroupSep
       |> div [ id "action-bar" ]
 
-viewButtonGroup : S.Address SM.Update -> ButtonGroup -> Html
+viewButtonGroup : S.Address Actions.Action -> ButtonGroup -> Html
 viewButtonGroup chan bg =
     L.map (viewButton chan) bg
       |> div [ class "action-bar-button-group" ]
 
 -- Later: KB shortcut (for display), icon, callback (?)
-viewButton : S.Address SM.Update -> Button -> Html
+viewButton : S.Address Actions.Action -> Button -> Html
 viewButton chan button =
     div
       [ class "actionbar-button"
-      , onClick chan button.action ]
+      , onClick chan button.action
+      ]
       [ text button.name ]
 
 buttonGroupSep : Html

@@ -1,31 +1,20 @@
-module Shell.ElementsPanel where
+module ElementsPanel where
 
-import Shell.Module (..)
-import Shell.Common (..)
+import Signal
+
+import Model
+import Shell.Common exposing (..)
 
 -- MODEL
 
-type alias SidebarState =
-    { modules : List Module
-    , selection : Maybe Selection
+type alias ElemPanelState =
+    { filterStr : Maybe String
     }
 
-emptySidebarState = { modules = [], selection = Nothing }
-
-type Selection = ElemSelection ElemPos
-
-type alias ElemPos = { modIdx : Int, elemIdx : Int }
-
--- TODO: okay, but how do we forward events *up*??
+emptyElemPanelState = { filterStr = Nothing }
 
 type Action
-    = InsertElem (ModName, Func)
-    | ClickOn ElemPos
-    | Down
-    | Up
-    | Left
-    | Filter String
-    | NoOp
+    = Filter String
 
 type ElementType = Workflow | App | Datatype
 
@@ -33,18 +22,12 @@ type ElementType = Workflow | App | Datatype
 
 update : Action -> State -> State
 update action state =
-    case (Debug.log "action" action) of
-      ClickOn pos -> { state | selection <- Just <| ElemSelection pos }
-      -- TODO
-      Down -> state
-      Up -> state
-      Left -> state
-      Filter str -> state
-      SidebarNoOp -> state
+    case action of
+      Filter filter -> { state | filterStr <- if filter == "" then Nothing else Just filter }
 
 -- VIEW
 
-view : LC.LocalChannel SidebarAction -> SidebarState -> Html
+view : S.Address Model.Action -> Model.State -> Html
 view chan state =
     div [ id "left" ]
       [ scrollPanel
@@ -64,7 +47,7 @@ view chan state =
            in L.map3 (moduleSectionView chan) state.modules indices selections)
       ]
 
-moduleSectionView : LC.LocalChannel SidebarAction -> SidebarModule -> Int -> Maybe Int -> Html
+moduleSectionView : LC.LocalChannel .... -> SidebarModule -> Int -> Maybe Int -> Html
 moduleSectionView chan {name, elements} modIdx selection =
     div
       [ class "panel-contents-section" ]
@@ -86,7 +69,7 @@ moduleSectionView chan {name, elements} modIdx selection =
           ]
       ]
 
-modElementView : LC.LocalChannel SidebarAction -> ModuleElement -> SidebarElemPos -> Bool -> Html
+modElementView : LC.LocalChannel .... -> ModuleElement -> Bool -> Html
 modElementView chan el pos selected =
     let className = "module-element" ++ (if selected then " selected" else "")
     in li [ class className, onClick (LC.send chan <| ClickOn pos) ] [ elementLabel el ]

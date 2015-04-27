@@ -1,4 +1,4 @@
-module Shell.Common where
+module CommonUI where
 
 import Html (..)
 import Html.Attributes (..)

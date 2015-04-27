@@ -10,6 +10,25 @@ import Maybe as M
 
 import Util exposing (..)
 
+{-
+type Action
+    = ElemPanelAction ElementsPanel.Action
+    | GraphEditorAction GraphEditor.Action
+    | AddLambda
+    | AddApNode Model.FuncId
+    | NoOp
+
+-- TODO: tabs, multiple modules
+type alias State =
+    { mod : Module
+    , editingFn : Maybe FuncName
+    , elemPanelState : ElemPanelState
+    }
+
+type alias ElemPanelState =
+    { filter : Maybe String }
+
+-}
 -- MODULE
 
 type alias ModName = String
@@ -90,7 +109,7 @@ getFunc mod name =
       Just bif -> Just bif
       Nothing -> D.get name mod.userFuncs
 
--- GRAPH
+-- GRAPH (TODO: maybe factor this out?)
 
 {- TODO: mark ports as results! (and as discarded?)
 probably requires redefining in port and outport id

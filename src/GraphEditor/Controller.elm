@@ -82,7 +82,7 @@ inPortActions state portId =
 
 -- process 'em...
 
-update : UpdateFunc State Action
+update : Action -> State -> State
 update action state =
     case action of
       -- dragging

@@ -22,7 +22,7 @@ type alias State =
     , editorLoc : DW.CollageLocation
     }
 
-type GraphEditorEvt
+type Action
     = MouseUpdate (DW.CollageLocation, DW.PrimMouseEvent)
     | ModuleUpdate Model.Module
 
@@ -46,9 +46,9 @@ editorLocFunc windowDims =
                 }
        }
 
-update : GraphEditorEvt -> State -> State
-update evt state =
-    case evt of
+update : Action -> State -> State
+update action state =
+    case action of
       MouseUpdate mouseEvt ->
           { state | intState <- DI.update mouseEvt state.intState }
       ModuleUpdate newMod ->
