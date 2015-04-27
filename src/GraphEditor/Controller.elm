@@ -8,8 +8,9 @@ import Diagrams.Interact exposing (..)
 import Diagrams.Geom exposing (..)
 import Diagrams.Actions exposing (..)
 
+import Model exposing (..)
 import GraphEditor.Model exposing (..)
-import GraphEditor.Util exposing (..)
+import Util exposing (..)
 
 posNodeActions nodePath dragState =
     case dragState of
@@ -87,16 +88,12 @@ update action state =
       -- dragging
       DragNodeStart attrs -> { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode = Nothing } }
       DragEdgeStart attrs -> { state | dragState <- Just <|
-          DraggingEdge { attrs | upstreamNodes = upstreamNodes state.graph (fst attrs.fromPort) } }
+          DraggingEdge { attrs | upstreamNodes = upstreamNodes (state |> getGraph) (fst attrs.fromPort) } }
       PanStart {offset} -> { state | dragState <- Just <| DragPanning { offset = offset } }
       DragMove mousePos ->
           case state.dragState of
             Just (DraggingNode attrs) ->
-                let moveRes = moveNode state.graph attrs.nodePath
-                                       (mousePos `pointSubtract` attrs.offset)
-                in case moveRes of
-                     Ok newGraph -> { state | graph <- newGraph }
-                     Err msg -> Debug.crash msg
+                updateGraph state <| moveNode attrs.nodePath (mousePos `pointSubtract` attrs.offset)
             Just (DraggingEdge attrs) ->
                 { state | dragState <-
                             Just <| DraggingEdge { attrs | endPos <- mousePos } }
@@ -107,19 +104,13 @@ update action state =
       DragEnd -> { state | dragState <- Nothing }
       -- add and remove
       AddNode posNode ->
-          case addNode [posNode.id] posNode state.graph of
-            Ok newGraph -> { state | graph <- newGraph }
-            Err msg -> Debug.crash msg
+          updateGraph state <| addNode [posNode.id] posNode
       RemoveNode nodePath ->
-          case removeNode state.graph nodePath of
-            Ok newGraph -> { state | graph <- newGraph }
-            Err msg -> Debug.crash msg
+          updateGraph state <| removeNode nodePath
       AddEdge edge ->
-          case addEdge edge state.graph of
-            Ok newGraph -> { state | graph <- newGraph
-                                   , dragState <- Nothing }
-            Err msg -> Debug.crash msg
-      RemoveEdge edge -> { state | graph <- removeEdge edge state.graph }
+          updateGraph { state | dragState <- Nothing } <| addEdge edge
+      RemoveEdge edge ->
+          updateGraph state <| removeEdge edge
       -- drag into lambdas
       OverLambda lambdaPath ->
           case state.dragState of
@@ -134,8 +125,6 @@ update action state =
                 in { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode <- Nothing } }
             _ -> Debug.crash "unexpected event"
       DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
-          if canBeDroppedInLambda state.graph lambdaPath droppedNodePath
-          then case moveNodeToLambda state.graph lambdaPath droppedNodePath posInLambda of
-            Ok newGraph -> { state | graph <- newGraph }
-            Err msg -> Debug.crash msg
+          if canBeDroppedInLambda (state |> getGraph) lambdaPath droppedNodePath
+          then updateGraph state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
           else state

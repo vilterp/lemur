@@ -20,10 +20,11 @@ import Diagrams.Actions exposing (..)
 import Diagrams.Query exposing (..)
 import Diagrams.Debug exposing (..)
 
+import Model exposing (..)
 import GraphEditor.Model exposing (..)
 import GraphEditor.Styles exposing (..)
 import GraphEditor.Controller exposing (..)
-import GraphEditor.Util exposing (..)
+import Util exposing (..)
 
 -- common elements
 xGlyph : Color.Color -> Maybe Color.Color -> Diagram Tag Action
@@ -130,14 +131,15 @@ viewLambdaNode node nodePath state =
         layout <| [titleRow, hrule nodeTopDivider 3, subCanvas]
 
 -- TODO: padding is awkward
-viewApNode : ApNodeAttrs -> NodePath -> State -> Diagram Tag Action
-viewApNode node nodePath state =
-    let funcOutPortColor = portStateColorCode <| outPortState state (nodePath, FuncValueSlot)
+viewApNode : FuncId -> NodePath -> State -> Diagram Tag Action
+viewApNode funcId nodePath state =
+    let func = getFunc state.mod funcId |> getMaybeOrCrash "no such func"
+        funcOutPortColor = portStateColorCode <| outPortState state (nodePath, FuncValueSlot)
         funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions state (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
-        titleRow = flexCenter (nodeTitle node.title Color.white nodePath) funcOutPort
-        params = InputGroup <| L.map ApParamSlot node.params
-        results = OutputGroup <| L.map ApResultSlot node.results
+        titleRow = flexCenter (nodeTitle (func |> funcName) Color.white nodePath) funcOutPort
+        params = InputGroup <| L.map ApParamSlot (func |> funcParams)
+        results = OutputGroup <| L.map ApResultSlot (func |> funcReturnVals)
     in nodeDiagram nodePath state titleRow [params, results] apNodeBgColor -- TODO: lighter
 
 viewIfNode : NodePath -> State -> Diagram Tag Action
@@ -200,9 +202,9 @@ viewEdgeXOut nodesDia edge =
 viewGraph : State -> Diagram Tag Action
 viewGraph state = 
     -- TODO: draw lambda nodes under other nodes
-    let nodes = zcat <| L.map (viewPosNode state []) <| D.values state.graph.nodes
-        edges = zcat <| L.map (viewEdge nodes) state.graph.edges
-        edgeXOuts = zcat <| L.map (viewEdgeXOut nodes) state.graph.edges
+    let nodes = zcat <| L.map (viewPosNode state []) <| D.values (state |> getGraph).nodes
+        edges = zcat <| L.map (viewEdge nodes) (state |> getGraph).edges
+        edgeXOuts = zcat <| L.map (viewEdgeXOut nodes) (state |> getGraph).edges
         draggingEdge = case state.dragState of
                          Just (DraggingEdge attrs) -> [viewDraggingEdge attrs.fromPort nodes attrs.endPos]
                          _ -> []

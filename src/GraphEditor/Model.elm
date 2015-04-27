@@ -9,7 +9,9 @@ import Result as R
 import Maybe as M
 import Debug
 
-import GraphEditor.Util exposing (..)
+import Model exposing (..)
+
+import Util exposing (..)
 
 -- data structures
 
@@ -19,12 +21,15 @@ type DraggingState
     | DragPanning { offset : Point }
 
 type alias State =
-    { graph : Graph
+    { mod : Module
+    , funcName : FuncName
     , dragState : Maybe DraggingState
     , pan : Point
     }
 
-emptyState = { graph = emptyGraph, dragState = Nothing, pan = (0, 0) }
+initState : Module -> FuncName -> State
+initState mod funcName =
+    { mod = mod, funcName = funcName, dragState = Nothing, pan = (0, 0) }
 
 -- tags
 
@@ -54,14 +59,41 @@ type Action
     | NotOverLambda NodePath
     | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
 
--- operations
+type PortState
+    = NormalPort
+    | InvalidPort
+    | TakenPort
+    | ValidPort
 
--- queries
+type LambdaState
+    = ValidNodeOverLS
+    | InvalidNodeOverLS
+    | NormalLS
+
+getUserFunc : State -> UserFuncAttrs
+getUserFunc state =
+    case state.mod.userFuncs |> D.get state.funcName of
+      Just (UserFunc attrs) -> attrs
+      Just (BuiltinFunc _) -> Debug.crash "builtin func supposed to be user func"
+      Nothing -> Debug.crash <| "no func found named " ++ state.funcName
+
+getGraph : State -> Graph
+getGraph state =
+    getUserFunc state |> .graph
+
+updateGraph : State -> (Graph -> Result String Graph) -> State
+updateGraph state updateFun =
+    let mod = state.mod
+        newUFs = state.mod.userFuncs
+                  |> D.update state.funcName (\uFunc ->
+                      M.map (\(UserFunc attrs) ->
+                          UserFunc { attrs | graph <- updateFun attrs.graph |> getOrCrash }) uFunc)
+    in { state | mod <- { mod | userFuncs <- newUFs } }
 
 -- TODO(perf): these are same for duration of drag. could save somewhere.
 inPortState : State -> InPortId -> PortState
 inPortState state (thisNodePath, slotId) =
-    if funcOutPortUsed state thisNodePath
+    if funcOutPortUsed (state |> getGraph) thisNodePath
     then InvalidPort
     else case state.dragState of
            Just (DraggingEdge attrs) ->
@@ -69,7 +101,7 @@ inPortState state (thisNodePath, slotId) =
               in if -- dragging from this node
                     | thisNodePath `startsWith` fromNodePath -> InvalidPort
                     -- this node already taken
-                    | inPortTaken state.graph (thisNodePath, slotId) -> TakenPort
+                    | inPortTaken (state |> getGraph) (thisNodePath, slotId) -> TakenPort
                     -- no cycles
                     | thisNodePath `Set.member` attrs.upstreamNodes -> InvalidPort
                     | L.any (\unPath -> thisNodePath `startsWith` unPath) (Set.toList <| attrs.upstreamNodes) -> InvalidPort
@@ -82,11 +114,11 @@ inPortState state (thisNodePath, slotId) =
 -- TODO: highlight as valid when you mouse over an in port of same type
 outPortState : State -> OutPortId -> PortState
 outPortState state (nodePath, slotId) =
-    if | funcOutPortUsed state nodePath ->
+    if | funcOutPortUsed (state |> getGraph) nodePath ->
             case slotId of
               FuncValueSlot -> NormalPort
               _ -> InvalidPort
-       | anyNormalPortsUsed state nodePath ->
+       | anyNormalPortsUsed (state |> getGraph) nodePath ->
             case slotId of
               FuncValueSlot -> InvalidPort
               _ -> NormalPort
@@ -99,7 +131,7 @@ lambdaState state nodePath =
       Just (DraggingNode attrs) ->
           case attrs.overLambdaNode of
             Just overLN -> if overLN == nodePath
-                           then if canBeDroppedInLambda state.graph overLN attrs.nodePath
+                           then if canBeDroppedInLambda (state |> getGraph) overLN attrs.nodePath
                                 then ValidNodeOverLS
                                 else InvalidNodeOverLS
                            else NormalLS

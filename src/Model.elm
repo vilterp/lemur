@@ -25,18 +25,24 @@ type alias Module =
 
 -- TODO: can't figure out rn how to use extensible records here
 type Func
-    = BuiltinFunc { name : String
-                  , params : List String
-                  , returnVals : List String
-                  , pythonCode : String
-                  }
-    | UserFunc { name : String
-               , graph : Graph
-               , params : List String
-               , returnVals : List String
-               , nextApId : Int
-               , nextLambdaId : Int
-               }
+    = BuiltinFunc BuiltinFuncAttrs
+    | UserFunc UserFuncAttrs
+
+type alias BuiltinFuncAttrs =
+    { name : String
+    , params : List String
+    , returnVals : List String
+    , pythonCode : String
+    }
+
+type alias UserFuncAttrs =
+    { name : String
+    , graph : Graph
+    , params : List String
+    , returnVals : List String
+    , nextApId : Int
+    , nextLambdaId : Int
+    }
 
 -- TODO: user func args are computed from graph
 
@@ -144,8 +150,8 @@ nestedPosNodeUpdate dict path updateFn =
                   _ -> Err "invalid path: not a lambda node"
             Nothing -> Err "invalid path"
 
-moveNode : Graph -> NodePath -> Point -> Result String Graph
-moveNode graph nodePath newPos =
+moveNode : NodePath -> Point -> Graph -> Result String Graph
+moveNode nodePath newPos graph =
     nestedPosNodeUpdate graph.nodes nodePath (M.map (\posNode -> { posNode | pos <- newPos }))
       |> R.map (\newNodes -> { graph | nodes <- newNodes })
 
@@ -153,8 +159,8 @@ moveNode graph nodePath newPos =
 addEdge : Edge -> Graph -> Result String Graph
 addEdge newEdge graph = Ok { graph | edges <- newEdge :: graph.edges }
 
-removeEdge : Edge -> Graph -> Graph
-removeEdge edge graph = { graph | edges <- L.filter (\e -> e /= edge) graph.edges }
+removeEdge : Edge -> Graph -> Result String Graph
+removeEdge edge graph = Ok { graph | edges <- L.filter (\e -> e /= edge) graph.edges }
 
 -- TODO: I think first arg should really be pathAbove, but don't feel like
 -- refactoring. Need Elm IDE!
@@ -164,15 +170,15 @@ addNode fullPath posNode graph =
       |> R.map (\newNodes -> { graph | nodes <- newNodes })
 
 -- TODO: this silently fails with an invalid path, which is not great.
-removeNode : Graph -> NodePath -> Result String Graph
-removeNode graph nodePath =
+removeNode : NodePath -> Graph -> Result String Graph
+removeNode nodePath graph =
     let involvingNode e = fst e.from `startsWith` nodePath || fst e.to `startsWith` nodePath
     in (nestedPosNodeUpdate graph.nodes nodePath (always Nothing)
             |> R.map (\newNodes -> { graph | nodes <- newNodes
                                            , edges <- L.filter (not << involvingNode) graph.edges }))
 
-getNode : Graph -> NodePath -> Result String PosNode
-getNode graph nodePath =
+getNode : NodePath -> Graph -> Result String PosNode
+getNode nodePath graph =
     let recurse nodeDict path =
           case path of
             [] -> Err "invalid path"
@@ -186,10 +192,10 @@ getNode graph nodePath =
                       _ -> Err <| x ++ " not a lambda node")
     in recurse graph.nodes nodePath
 
-moveNodeToLambda : Graph -> NodePath -> NodePath -> Point -> Result String Graph
-moveNodeToLambda graph lambdaPath droppedNodePath posInLambda =
-    (getNode graph droppedNodePath)
-      `R.andThen` (\posNode -> (removeNode graph droppedNodePath)
+moveNodeToLambda : NodePath -> NodePath -> Point -> Graph -> Result String Graph
+moveNodeToLambda lambdaPath droppedNodePath posInLambda graph =
+    (getNode droppedNodePath graph)
+      `R.andThen` (\posNode -> (removeNode droppedNodePath graph)
         `R.andThen` (\newGraph ->
           addNode (lambdaPath ++ droppedNodePath) { posNode | pos <- posInLambda } newGraph))
 

@@ -27,7 +27,7 @@ getOrCrash res =
       Ok r -> r
 
 getMaybeOrCrash : String -> Maybe a -> a
-getMaybeOrCrash msg m=
+getMaybeOrCrash msg m =
     case m of
       Just x -> x
       Nothing -> Debug.crash msg
