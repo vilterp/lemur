@@ -1,13 +1,16 @@
-module Codegen.GraphToAst where
+module Codegen where
 
 import List as L
 import Dict as D
-import String
+import String as S
 
 import Debug
 
-import GraphEditor.Model exposing (..)
+import Model exposing (..)
 import Codegen.AST as AST
+import Codegen.PrettyPrint as PrettyPrint
+
+import Util exposing (..)
 
 noDependencies : Graph -> List (NodePath, Node)
 noDependencies graph =
@@ -23,13 +26,13 @@ topSort graph =
           case noDependencies newGraph of
             [] -> list
             (pathAndNode::_) ->
-                case removeNode newGraph (fst pathAndNode) of
+                case removeNode (fst pathAndNode) newGraph of
                   Ok newerGraph -> recurse newerGraph (pathAndNode::list)
                   Err msg -> Debug.crash msg
     in recurse graph [] |> L.reverse
 
 nodePathToString : NodePath -> String
-nodePathToString nodePath = String.join "_" nodePath
+nodePathToString nodePath = S.join "_" nodePath
 
 inSlotToString : InSlotId -> String
 inSlotToString slotId =
@@ -62,59 +65,81 @@ getSrcPort graph (nodePath, slotId) =
       [{from, to}] -> Just from
       _ -> Debug.crash "should only be one edge to a port"
 
-nodeToStmt : Graph -> (NodePath, Node) -> AST.Statement
-nodeToStmt graph (nodePath, node) =
+nodeToStmt : Module -> Graph -> (NodePath, Node) -> AST.Statement
+nodeToStmt mod graph (nodePath, node) =
     case node of
-      ApNode {title, params, results} ->
+      ApNode funcId ->
           -- TODO: these don't necessarily line up, & some of them need
           -- to be from params to this func
-          let toEdges = edgesTo graph nodePath
+          let func = getFuncOrCrash mod funcId
+              toEdges = edgesTo graph nodePath
               getSrcVar : InPortId -> String
               getSrcVar inPortId =
                   case getSrcPort graph inPortId of
                     Just outPort -> outPortToString outPort
                     Nothing -> inPortToString inPortId
-              toVars = L.map getSrcVar <| L.map (\inSlot -> (nodePath, ApParamSlot inSlot)) params
-              call = AST.FuncCall { func = AST.Variable title
+              toVars = L.map getSrcVar <| L.map (\inSlot -> (nodePath, ApParamSlot inSlot)) (func |> funcParams)
+              call = AST.FuncCall { func = AST.Variable (func |> funcName)
                                   , args = L.map AST.Variable toVars
                                   }
-          in AST.VarAssn { varName = (nodePathToString nodePath) ++ "_result"
+          in AST.VarAssn { varName = (nodePathToString nodePath)
                          , expr = call
                          }
       IfNode ->
           -- TODO: 4 real
           -- since we're thinking of this as an expression, should assign 
           -- variable for its result
+          -- and then this function will need to return a list of statements, not just one
           AST.IfStmt { cond = AST.IntLit 2
                      , ifBlock = []
                      , elseBlock = []
                      }
       LambdaNode attrs ->
           -- TODO: 4 real
-          AST.FuncDef { name = String.join "_" nodePath
+          AST.FuncDef { name = S.join "_" nodePath
                       , args = []
                       , body = []
                       }
 
-makeReturnStmt : Graph -> AST.Statement
-makeReturnStmt graph =
-    case freeOutPorts graph of
+makeReturnStmt : Module -> Graph -> AST.Statement
+makeReturnStmt mod graph =
+    case freeOutPorts mod graph of
       [op] ->
           outPortToString op |> AST.Variable |> AST.Return
       outPorts ->
           outPorts
             |> L.map (\op -> let var = outPortToString op
-                       in (var, AST.Variable var))
+                             in (var, AST.Variable var))
             |> D.fromList
             |> AST.DictLiteral
             |> AST.Return
 
 -- TODO: this will always be a FuncDef, not just any statement
-toAst : String -> Graph -> AST.Statement
-toAst funcName graph =
-    let bodyStmts = topSort graph |> L.map (nodeToStmt graph)
-        returnStmt = makeReturnStmt graph
-    in AST.FuncDef { name = funcName
-                   , args = L.map inPortToString <| freeInPorts graph
+userFuncToAst : Module -> UserFuncAttrs -> AST.Statement
+userFuncToAst mod userFunc =
+    let bodyStmts = topSort userFunc.graph |> L.map (nodeToStmt mod userFunc.graph)
+        returnStmt = makeReturnStmt mod userFunc.graph
+    in AST.FuncDef { name = userFunc.name
+                   , args = L.map inPortToString <| freeInPorts mod userFunc.graph
                    , body = bodyStmts ++ [returnStmt]
                    }
+
+funcToString : Module -> Model.Func -> String
+funcToString mod func =
+   case func of
+     Model.BuiltinFunc attrs ->
+         let heading = "def " ++ attrs.name ++
+                          "(" ++ (S.join ", " attrs.params) ++ "):"
+         in PrettyPrint.headerBlock heading
+              [PrettyPrint.preIndented attrs.pythonCode]
+            |> PrettyPrint.stringify
+     Model.UserFunc attrs ->
+         userFuncToAst mod attrs
+           |> AST.statementToPython
+
+moduleToPython : Module -> String
+moduleToPython mod =
+    D.union mod.userFuncs mod.builtinFuncs
+      |> D.toList
+      |> L.map (funcToString mod << snd)
+      |> S.join "\n\n"

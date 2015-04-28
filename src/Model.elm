@@ -109,6 +109,11 @@ getFunc mod name =
       Just bif -> Just bif
       Nothing -> D.get name mod.userFuncs
 
+getFuncOrCrash : Module -> FuncName -> Func
+getFuncOrCrash mod funcName =
+    getFunc mod funcName
+      |> getMaybeOrCrash ("no such function " ++ funcName)
+
 -- GRAPH (TODO: maybe factor this out?)
 
 {- TODO: mark ports as results! (and as discarded?)
@@ -266,15 +271,20 @@ anyNormalPortsUsed graph nodePath =
 inSlots : Module -> Node -> List InSlotId
 inSlots mod node =
     case node of
-      ApNode funcId -> L.map ApParamSlot [] -- TODO: need to look this up in function definition
+      ApNode funcId ->
+          getFuncOrCrash mod funcId
+            |> funcParams
+            |> L.map ApParamSlot
       IfNode -> [IfCondSlot, IfTrueSlot, IfFalseSlot]
       LambdaNode _ -> []
 
 outSlots : Module -> Node -> List OutSlotId
 outSlots mod node =
     case node of
-      ApNode attrs ->
-        L.map ApResultSlot [] -- TODO: need to look this up in function definition
+      ApNode funcId ->
+          getFuncOrCrash mod funcId
+            |> funcReturnVals
+            |> L.map ApResultSlot
       IfNode -> [IfResultSlot]
       LambdaNode _ -> [] -- never really want to return this
 
@@ -295,6 +305,6 @@ freeOutPorts mod graph =
     let takenOutPorts = L.map .from graph.edges -- can be dups, but that's ok
         allOutPorts =
             D.toList graph.nodes
-              |> L.concatMap (\(nodeId, posNode) -> outSlots mod posNode.node
-                                |> L.map (\slot -> ([nodeId], slot)))
+              |> L.concatMap (\(nodeId, posNode) ->
+                    outSlots mod posNode.node |> L.map (\slot -> ([nodeId], slot)))
     in allOutPorts |> L.filter (\ip -> not <| ip `L.member` takenOutPorts)

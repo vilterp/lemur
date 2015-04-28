@@ -8,6 +8,7 @@ import Result as R
 
 import Debug
 
+import Codegen
 
 helloMap : Module
 helloMap =
@@ -21,22 +22,22 @@ helloMap =
                             , pythonCode = "return ['Pete', 'Borja', 'Ravi', 'Mike']"
                             }
               )
-            , ( "map"
-              , BuiltinFunc { name = "map"
+            , ( "Map"
+              , BuiltinFunc { name = "Map"
                             , params = ["function", "list"]
                             , returnVals = ["mappedList"]
                             , pythonCode = "return map(function, list)"
                             }
               )
-            , ( "addExcl"
-              , BuiltinFunc { name = "addExcl"
+            , ( "add_excl"
+              , BuiltinFunc { name = "add_excl"
                             , params = ["str"]
                             , returnVals = ["added"]
                             , pythonCode = "return str + '!'"
                             }
               )
-            , ( "addHi"
-              , BuiltinFunc { name = "addHi"
+            , ( "add_hi"
+              , BuiltinFunc { name = "add_hi"
                             , params = ["str"]
                             , returnVals = ["added"]
                             , pythonCode = "return 'Hi ' + str"
@@ -44,8 +45,8 @@ helloMap =
               )
             -- TODO: define this in terms of join;
             -- define join in terms of fold
-            , ( "newlineJoin"
-              , BuiltinFunc { name = "newlineJoin"
+            , ( "newline_join"
+              , BuiltinFunc { name = "newline_join"
                             , params = ["list"]
                             , returnVals = ["joinedList"]
                             , pythonCode = "return '\\n'.join(list)"
@@ -66,12 +67,15 @@ helloMap =
           ]
     }
 
+-- real node ids will just be like "ap4" -- function names
+-- are just for readability of this example
+
 testGraph : Graph
 testGraph =
     { nodes =
         D.fromList
-            [ ("ap0-names", { pos = (-200, -200)
-                            , id = "ap0-names"
+            [ ("ap0_names", { pos = (-200, -200)
+                            , id = "ap0_names"
                             , node = ApNode "names"
                             })
             , ("lambda0"
@@ -80,40 +84,42 @@ testGraph =
                 , node = LambdaNode
                     { nodes =
                         D.fromList
-                          [ ("ap1-addExcl", { pos = (-100, 0)
-                                            , id = "ap1-addExcl"
-                                            , node = ApNode "addExcl"
-                                            })
-                          , ("ap2-addHi", { pos = (100, 0)
-                                          , id = "ap2-addHi"
-                                          , node = ApNode "addHi"
-                                          })
+                          [ ("ap1_add_excl", { pos = (-100, 0)
+                                             , id = "ap1_add_excl"
+                                             , node = ApNode "add_excl"
+                                             })
+                          , ("ap2_add_hi", { pos = (100, 0)
+                                           , id = "ap2_add_hi"
+                                           , node = ApNode "add_hi"
+                                           })
                           ]
                     , dims = { width = 300, height = 200 }
                     }
                 }
               )
-            , ("ap3-map", { pos = (100, 0)
-                          , id = "ap3-map"
-                          , node = ApNode "map"
+            , ("ap3_map", { pos = (100, 0)
+                          , id = "ap3_map"
+                          , node = ApNode "Map"
                           })
-            , ("ap4-newlineJoin", { pos = (300, 0)
-                                  , id = "ap4-newlineJoin"
-                                  , node = ApNode "newlineJoin"
-                                  })
+            , ("ap4_newline_join", { pos = (300, 0)
+                                   , id = "ap4_newline_join"
+                                   , node = ApNode "newline_join"
+                                   })
             ]
     , edges =
-        [ { from = (["ap0-names"], ApResultSlot "names")
-          , to = (["ap3-map"], ApParamSlot "list")
+        [ { from = (["ap0_names"], ApResultSlot "names")
+          , to = (["ap3_map"], ApParamSlot "list")
           }
         , { from = (["lambda0"], FuncValueSlot)
-          , to = (["ap3-map"], ApParamSlot "function")
+          , to = (["ap3_map"], ApParamSlot "function")
           }
-        , { from = (["ap3-map"], ApResultSlot "mappedList")
-          , to = (["ap4-newlineJoin"], ApParamSlot "list")
+        , { from = (["ap3_map"], ApResultSlot "mappedList")
+          , to = (["ap4_newline_join"], ApParamSlot "list")
           }
-        , { from = (["lambda0", "ap1-addExcl"], ApResultSlot "added")
-          , to = (["lambda0", "ap2-addHi"], ApParamSlot "str")
+        , { from = (["lambda0", "ap1_add_excl"], ApResultSlot "added")
+          , to = (["lambda0", "ap2_add_hi"], ApParamSlot "str")
           }
         ]
     }
+
+code = Codegen.moduleToPython helloMap
