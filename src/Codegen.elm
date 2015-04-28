@@ -94,7 +94,6 @@ nodeToStmt mod graph (nodePath, node) =
                             |> L.map (\(path, node) -> (nodePath ++ path, node))
                             |> L.concatMap (nodeToStmt mod subGraph)
               returnStmt = makeReturnStmt mod subGraph nodePath
-              np = Debug.log "nodePath" nodePath
           in [ AST.FuncDef { name = S.join "_" nodePath
                            , args = freeInPorts mod subGraph nodePath
                                       |> L.map inPortToString

@@ -91,7 +91,7 @@ testGraph =
                                            , node = ApNode "add_hi"
                                            })
                           ]
-                    , dims = { width = 300, height = 200 }
+                    , dims = { width = 200, height = 150 }
                     }
                 }
               )

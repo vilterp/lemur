@@ -138,8 +138,8 @@ viewApNode funcId nodePath state =
         funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions state (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
         titleRow = flexCenter (nodeTitle (func |> funcName) Color.white nodePath) funcOutPort
-        params = InputGroup <| L.map ApParamSlot (func |> funcParams)
-        results = OutputGroup <| L.map ApResultSlot (func |> funcReturnVals)
+        params = InputGroup <| L.map ApParamSlot (func |> funcParams state.mod)
+        results = OutputGroup <| L.map ApResultSlot (func |> funcReturnVals state.mod)
     in nodeDiagram nodePath state titleRow [params, results] apNodeBgColor -- TODO: lighter
 
 viewIfNode : NodePath -> State -> Diagram Tag Action
