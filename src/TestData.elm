@@ -19,28 +19,28 @@ helloMap =
               , BuiltinFunc { name = "names"
                             , params = []
                             , returnVals = ["names"]
-                            , pythonCode = "return ['Pete', 'Borja', 'Ravi', 'Mike']"
+                            , pythonCode = "return {'names':['Pete', 'Borja', 'Ravi', 'Mike']}"
                             }
               )
             , ( "Map"
               , BuiltinFunc { name = "Map"
                             , params = ["function", "list"]
                             , returnVals = ["mappedList"]
-                            , pythonCode = "return map(function, list)"
+                            , pythonCode = "def apply_single(item):\n  return function(item).values()[0]\nreturn {'mappedList': map(apply_single, list)}"
                             }
               )
             , ( "add_excl"
               , BuiltinFunc { name = "add_excl"
                             , params = ["str"]
                             , returnVals = ["added"]
-                            , pythonCode = "return str + '!'"
+                            , pythonCode = "return {'added':str + '!'}"
                             }
               )
             , ( "add_hi"
               , BuiltinFunc { name = "add_hi"
                             , params = ["str"]
                             , returnVals = ["added"]
-                            , pythonCode = "return 'Hi ' + str"
+                            , pythonCode = "return {'str': 'Hi ' + str}"
                             }
               )
             -- TODO: define this in terms of join;
@@ -49,7 +49,7 @@ helloMap =
               , BuiltinFunc { name = "newline_join"
                             , params = ["list"]
                             , returnVals = ["joinedList"]
-                            , pythonCode = "return '\\n'.join(list)"
+                            , pythonCode = "return {'joinedList': '\\n'.join(list)}"
                             }
               )
             ]
@@ -58,8 +58,6 @@ helloMap =
           [ ("main"
             , UserFunc { name = "main"
                        , graph = testGraph
-                       , params = []
-                       , returnVals = ["result"]
                        , nextApId = 4
                        , nextLambdaId = 1
                        }

@@ -11,6 +11,7 @@ type Expr
     | StringLit String
     | Variable String
     | MemberAccess Expr String
+    | DictAccess Expr String
     | FuncCall { func : Expr, args : List Expr }
     | BinOp String Expr Expr
     | DictLiteral (D.Dict String Expr)
@@ -25,13 +26,18 @@ type Statement
 parens : String -> String
 parens str = "(" ++ str ++ ")"
 
+-- I feel like there are a lot of little bugs lurking in here
+-- with parenthesization, escaping, etc
 exprToPython : Expr -> String
 exprToPython expr =
     case expr of
       IntLit x -> toString x
       StringLit str -> toString str
       Variable str -> str
-      MemberAccess exp memb -> (exprToPython exp) ++ "." ++ memb
+      MemberAccess exp memb ->
+          (exprToPython exp) ++ "." ++ memb
+      DictAccess exp name ->
+          (exprToPython exp) ++ "[" ++ (toString name) ++ "]"
       FuncCall {func, args} ->
           (exprToPython func) ++
             (parens <|

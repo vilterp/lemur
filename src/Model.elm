@@ -7,6 +7,7 @@ import Set
 import List as L
 import Result as R
 import Maybe as M
+import String as S
 
 import Util exposing (..)
 
@@ -57,8 +58,6 @@ type alias BuiltinFuncAttrs =
 type alias UserFuncAttrs =
     { name : String
     , graph : Graph
-    , params : List String
-    , returnVals : List String
     , nextApId : Int
     , nextLambdaId : Int
     }
@@ -77,23 +76,53 @@ emptyUserFunc : FuncName -> Func
 emptyUserFunc name =
     UserFunc { name = name
              , graph = emptyGraph
-             , params = []
-             , returnVals = []
              , nextApId = 0
              , nextLambdaId = 0
              }
 
-funcParams : Func -> List String
-funcParams func =
+-- this mod is def getting crowded
+
+nodePathToString : NodePath -> String
+nodePathToString nodePath = S.join "_" nodePath
+
+inSlotToString : InSlotId -> String
+inSlotToString slotId =
+    case slotId of
+      ApParamSlot name -> name
+      IfCondSlot -> "cond"
+      IfTrueSlot -> "iftrue"
+      IfFalseSlot -> "iffalse"
+
+inPortToString : InPortId -> String
+inPortToString (nodePath, slot) =
+    (nodePathToString nodePath) ++ "_" ++ (inSlotToString slot)
+
+outSlotToString : OutSlotId -> String
+outSlotToString slotId =
+    case slotId of
+      ApResultSlot name -> "_" ++ name
+      IfResultSlot -> "_result"
+      FuncValueSlot -> ""
+
+outPortToString : OutPortId -> String
+outPortToString (nodePath, slot) =
+    (nodePathToString nodePath) ++ (outSlotToString slot)
+
+funcParams : Module -> Func -> List String
+funcParams mod func =
     case func of
       BuiltinFunc attrs -> attrs.params
-      UserFunc attrs -> attrs.params
+      UserFunc attrs ->
+          freeInPorts mod attrs.graph
+            |> L.map inPortToString
 
-funcReturnVals : Func -> List String
-funcReturnVals func =
+funcReturnVals : Module -> Func -> List String
+funcReturnVals mod func =
     case func of
       BuiltinFunc attrs -> attrs.returnVals
-      UserFunc attrs -> attrs.returnVals
+      UserFunc attrs ->
+          freeOutPorts mod attrs.graph
+            |> L.map outPortToString
 
 -- TODO: can't figure out how to use extensible records here
 funcName : Func -> ModName
@@ -273,7 +302,7 @@ inSlots mod node =
     case node of
       ApNode funcId ->
           getFuncOrCrash mod funcId
-            |> funcParams
+            |> funcParams mod
             |> L.map ApParamSlot
       IfNode -> [IfCondSlot, IfTrueSlot, IfFalseSlot]
       LambdaNode _ -> []
@@ -283,7 +312,7 @@ outSlots mod node =
     case node of
       ApNode funcId ->
           getFuncOrCrash mod funcId
-            |> funcReturnVals
+            |> funcReturnVals mod
             |> L.map ApResultSlot
       IfNode -> [IfResultSlot]
       LambdaNode _ -> [] -- never really want to return this
@@ -300,6 +329,9 @@ freeInPorts mod graph =
                                 |> L.map (\slot -> ([nodeId], slot)))
     in allInPorts |> L.filter (\ip -> not <| ip `L.member` takenInPorts)
 
+{-| KNOWN ISSUE: this can end up calling itself with same arguments,
+if checking a recursive function. Need to either disallow recursion
+or make functions explicitly declare param & return vals -}
 freeOutPorts : Module -> Graph -> List OutPortId
 freeOutPorts mod graph =
     let takenOutPorts = L.map .from graph.edges -- can be dups, but that's ok

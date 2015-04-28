@@ -31,33 +31,6 @@ topSort graph =
                   Err msg -> Debug.crash msg
     in recurse graph [] |> L.reverse
 
-nodePathToString : NodePath -> String
-nodePathToString nodePath = S.join "_" nodePath
-
-inSlotToString : InSlotId -> String
-inSlotToString slotId =
-    case slotId of
-      ApParamSlot name -> name
-      IfCondSlot -> "cond"
-      IfTrueSlot -> "iftrue"
-      IfFalseSlot -> "iffalse"
-
-inPortToString : InPortId -> String
-inPortToString (nodePath, slot) =
-    (nodePathToString nodePath) ++ "_" ++ (inSlotToString slot)
-
-outSlotToString : OutSlotId -> String
-outSlotToString slotId =
-    case slotId of
-      ApResultSlot name -> "_" ++ name
-      IfResultSlot -> "_result"
-      FuncValueSlot -> ""
-
--- TODO factor out to nodePathToString
-outPortToString : OutPortId -> String
-outPortToString (nodePath, slot) =
-    (nodePathToString nodePath) ++ (outSlotToString slot)
-
 getSrcPort : Graph -> InPortId -> Maybe OutPortId
 getSrcPort graph (nodePath, slotId) =
     case edgesTo graph nodePath |> L.filter (\{from, to} -> snd to == slotId) of
@@ -65,7 +38,7 @@ getSrcPort graph (nodePath, slotId) =
       [{from, to}] -> Just from
       _ -> Debug.crash "should only be one edge to a port"
 
-nodeToStmt : Module -> Graph -> (NodePath, Node) -> AST.Statement
+nodeToStmt : Module -> Graph -> (NodePath, Node) -> List AST.Statement
 nodeToStmt mod graph (nodePath, node) =
     case node of
       ApNode funcId ->
@@ -78,46 +51,59 @@ nodeToStmt mod graph (nodePath, node) =
                   case getSrcPort graph inPortId of
                     Just outPort -> outPortToString outPort
                     Nothing -> inPortToString inPortId
-              toVars = L.map getSrcVar <| L.map (\inSlot -> (nodePath, ApParamSlot inSlot)) (func |> funcParams)
+              paramVars = L.map getSrcVar <| L.map (\inSlot -> (nodePath, ApParamSlot inSlot))
+                                                   (func |> funcParams mod)
               call = AST.FuncCall { func = AST.Variable (func |> funcName)
-                                  , args = L.map AST.Variable toVars
+                                  , args = L.map AST.Variable paramVars
                                   }
-          in AST.VarAssn { varName = (nodePathToString nodePath)
-                         , expr = call
-                         }
+              resultVarName = nodePathToString nodePath
+              callAssn = AST.VarAssn { varName = resultVarName
+                                     , expr = call
+                                     }
+              -- now make vars for return values
+              resultVars =
+                func
+                  |> funcReturnVals mod
+                  |> L.map (\name ->
+                      AST.VarAssn { varName = outPortToString (nodePath, ApResultSlot name)
+                                  , expr = AST.DictAccess
+                                              (AST.Variable resultVarName)
+                                              name
+                                  })
+          in callAssn :: resultVars
       IfNode ->
-          -- TODO: 4 real
-          -- since we're thinking of this as an expression, should assign 
-          -- variable for its result
-          -- and then this function will need to return a list of statements, not just one
-          AST.IfStmt { cond = AST.IntLit 2
-                     , ifBlock = []
-                     , elseBlock = []
-                     }
+          {- TODO: 4 real
+          since we're thinking of this as an expression, should assign 
+          variable for its result
+          and then this function will need to return a list of statements, not just one.
+           -}
+          [ AST.IfStmt { cond = AST.IntLit 2
+                       , ifBlock = []
+                       , elseBlock = []
+                       }
+          ]
       LambdaNode attrs ->
           -- TODO: 4 real
-          AST.FuncDef { name = S.join "_" nodePath
-                      , args = []
-                      , body = []
-                      }
+          [ AST.FuncDef { name = S.join "_" nodePath
+                        , args = []
+                        , body = []
+                        }
+          ]
 
 makeReturnStmt : Module -> Graph -> AST.Statement
 makeReturnStmt mod graph =
-    case freeOutPorts mod graph of
-      [op] ->
-          outPortToString op |> AST.Variable |> AST.Return
-      outPorts ->
-          outPorts
-            |> L.map (\op -> let var = outPortToString op
-                             in (var, AST.Variable var))
-            |> D.fromList
-            |> AST.DictLiteral
-            |> AST.Return
+    freeOutPorts mod graph
+      |> L.map (\op -> let var = outPortToString op
+                       in (var, AST.Variable var))
+      |> D.fromList
+      |> AST.DictLiteral
+      |> AST.Return
 
 -- TODO: this will always be a FuncDef, not just any statement
 userFuncToAst : Module -> UserFuncAttrs -> AST.Statement
 userFuncToAst mod userFunc =
-    let bodyStmts = topSort userFunc.graph |> L.map (nodeToStmt mod userFunc.graph)
+    let bodyStmts = topSort userFunc.graph
+                      |> L.concatMap (nodeToStmt mod userFunc.graph)
         returnStmt = makeReturnStmt mod userFunc.graph
     in AST.FuncDef { name = userFunc.name
                    , args = L.map inPortToString <| freeInPorts mod userFunc.graph
