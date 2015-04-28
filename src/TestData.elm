@@ -40,7 +40,7 @@ helloMap =
               , BuiltinFunc { name = "add_hi"
                             , params = ["str"]
                             , returnVals = ["added"]
-                            , pythonCode = "return {'str': 'Hi ' + str}"
+                            , pythonCode = "return {'added': 'Hi ' + str}"
                             }
               )
             -- TODO: define this in terms of join;

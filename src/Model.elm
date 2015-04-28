@@ -113,7 +113,7 @@ funcParams mod func =
     case func of
       BuiltinFunc attrs -> attrs.params
       UserFunc attrs ->
-          freeInPorts mod attrs.graph
+          freeInPorts mod attrs.graph []
             |> L.map inPortToString
 
 funcReturnVals : Module -> Func -> List String
@@ -121,7 +121,7 @@ funcReturnVals mod func =
     case func of
       BuiltinFunc attrs -> attrs.returnVals
       UserFunc attrs ->
-          freeOutPorts mod attrs.graph
+          freeOutPorts mod attrs.graph []
             |> L.map outPortToString
 
 -- TODO: can't figure out how to use extensible records here
@@ -320,23 +320,23 @@ outSlots mod node =
 -- for codegen, there can be no free in or out ports.
 -- free in and out ports are an invalid state.
 -- TODO: annoyingly repetitive, again
-freeInPorts : Module -> Graph -> List InPortId
-freeInPorts mod graph =
+freeInPorts : Module -> Graph -> NodePath -> List InPortId
+freeInPorts mod graph pathAbove =
     let takenInPorts = L.map .to graph.edges
         allInPorts =
             D.toList graph.nodes
               |> L.concatMap (\(nodeId, posNode) -> inSlots mod posNode.node
-                                |> L.map (\slot -> ([nodeId], slot)))
+                                |> L.map (\slot -> (pathAbove ++ [nodeId], slot)))
     in allInPorts |> L.filter (\ip -> not <| ip `L.member` takenInPorts)
 
 {-| KNOWN ISSUE: this can end up calling itself with same arguments,
 if checking a recursive function. Need to either disallow recursion
 or make functions explicitly declare param & return vals -}
-freeOutPorts : Module -> Graph -> List OutPortId
-freeOutPorts mod graph =
+freeOutPorts : Module -> Graph -> NodePath -> List OutPortId
+freeOutPorts mod graph pathAbove =
     let takenOutPorts = L.map .from graph.edges -- can be dups, but that's ok
         allOutPorts =
             D.toList graph.nodes
               |> L.concatMap (\(nodeId, posNode) ->
-                    outSlots mod posNode.node |> L.map (\slot -> ([nodeId], slot)))
+                    outSlots mod posNode.node |> L.map (\slot -> (pathAbove ++ [nodeId], slot)))
     in allOutPorts |> L.filter (\ip -> not <| ip `L.member` takenOutPorts)

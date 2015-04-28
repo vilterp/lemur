@@ -84,15 +84,27 @@ nodeToStmt mod graph (nodePath, node) =
           ]
       LambdaNode attrs ->
           -- TODO: 4 real
-          [ AST.FuncDef { name = S.join "_" nodePath
-                        , args = []
-                        , body = []
-                        }
-          ]
+          -- first basic, then closures
+          -- TODO: factor out common stuff w/ userFuncToAst
+          let subGraph =
+                { nodes = attrs.nodes
+                , edges = graph.edges
+                }
+              bodyStmts = topSort subGraph
+                            |> L.map (\(path, node) -> (nodePath ++ path, node))
+                            |> L.concatMap (nodeToStmt mod subGraph)
+              returnStmt = makeReturnStmt mod subGraph nodePath
+              np = Debug.log "nodePath" nodePath
+          in [ AST.FuncDef { name = S.join "_" nodePath
+                           , args = freeInPorts mod subGraph nodePath
+                                      |> L.map inPortToString
+                           , body = bodyStmts ++ [returnStmt]
+                           }
+             ]
 
-makeReturnStmt : Module -> Graph -> AST.Statement
-makeReturnStmt mod graph =
-    freeOutPorts mod graph
+makeReturnStmt : Module -> Graph -> NodePath -> AST.Statement
+makeReturnStmt mod graph nodePath =
+    freeOutPorts mod graph nodePath
       |> L.map (\op -> let var = outPortToString op
                        in (var, AST.Variable var))
       |> D.fromList
@@ -104,9 +116,10 @@ userFuncToAst : Module -> UserFuncAttrs -> AST.Statement
 userFuncToAst mod userFunc =
     let bodyStmts = topSort userFunc.graph
                       |> L.concatMap (nodeToStmt mod userFunc.graph)
-        returnStmt = makeReturnStmt mod userFunc.graph
+        returnStmt = makeReturnStmt mod userFunc.graph []
     in AST.FuncDef { name = userFunc.name
-                   , args = L.map inPortToString <| freeInPorts mod userFunc.graph
+                   , args = freeInPorts mod userFunc.graph []
+                              |> L.map inPortToString
                    , body = bodyStmts ++ [returnStmt]
                    }
 
