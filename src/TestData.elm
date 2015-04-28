@@ -57,9 +57,16 @@ helloMap =
         D.fromList
           [ ("main"
             , UserFunc { name = "main"
-                       , graph = testGraph
+                       , graph = mainGraph
                        , nextApId = 4
                        , nextLambdaId = 1
+                       }
+            )
+          , ("exclAndHi"
+            , UserFunc { name = "exclAndHi"
+                       , graph = exclAndHiGraph
+                       , nextApId = 3
+                       , nextLambdaId = 0
                        }
             )
           ]
@@ -68,33 +75,18 @@ helloMap =
 -- real node ids will just be like "ap4" -- function names
 -- are just for readability of this example
 
-testGraph : Graph
-testGraph =
+mainGraph : Graph
+mainGraph =
     { nodes =
         D.fromList
             [ ("ap0_names", { pos = (-200, -200)
                             , id = "ap0_names"
                             , node = ApNode "names"
                             })
-            , ("lambda0"
-              , { pos = (-300, 300)
-                , id = "lambda0"
-                , node = LambdaNode
-                    { nodes =
-                        D.fromList
-                          [ ("ap1_add_excl", { pos = (-100, 0)
-                                             , id = "ap1_add_excl"
-                                             , node = ApNode "add_excl"
-                                             })
-                          , ("ap2_add_hi", { pos = (100, 0)
-                                           , id = "ap2_add_hi"
-                                           , node = ApNode "add_hi"
-                                           })
-                          ]
-                    , dims = { width = 200, height = 150 }
-                    }
-                }
-              )
+            , ("ap1_exclAndHi", { pos = (-200, -200)
+                              , id = "ap1_exclAndHi"
+                              , node = ApNode "exclAndHi"
+                              })
             , ("ap3_map", { pos = (100, 0)
                           , id = "ap3_map"
                           , node = ApNode "Map"
@@ -108,14 +100,31 @@ testGraph =
         [ { from = (["ap0_names"], ApResultSlot "names")
           , to = (["ap3_map"], ApParamSlot "list")
           }
-        , { from = (["lambda0"], FuncValueSlot)
+        , { from = (["ap1_exclAndHi"], FuncValueSlot)
           , to = (["ap3_map"], ApParamSlot "function")
           }
         , { from = (["ap3_map"], ApResultSlot "mappedList")
           , to = (["ap4_newline_join"], ApParamSlot "list")
           }
-        , { from = (["lambda0", "ap1_add_excl"], ApResultSlot "added")
-          , to = (["lambda0", "ap2_add_hi"], ApParamSlot "str")
+        ]
+    }
+
+exclAndHiGraph : Graph
+exclAndHiGraph =
+    { nodes =
+        D.fromList
+          [ ("ap1_add_excl", { pos = (-100, 0)
+                             , id = "ap1_add_excl"
+                             , node = ApNode "add_excl"
+                             })
+          , ("ap2_add_hi", { pos = (100, 0)
+                           , id = "ap2_add_hi"
+                           , node = ApNode "add_hi"
+                           })
+          ]
+    , edges =
+        [ { from = (["ap1_add_excl"], ApResultSlot "added")
+          , to = (["ap2_add_hi"], ApParamSlot "str")
           }
         ]
     }
