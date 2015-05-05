@@ -13,7 +13,7 @@ testVal =
   , "{\"tag\": \"list\", \"value\": [{\"tag\": \"int\", \"value\": 2}, {\"tag\": \"int\", \"value\": 3}]}"
   , "{\"tag\": \"record\", \"value\": {\"foo\": {\"tag\": \"int\", \"value\": 2}, \"bar\": {\"tag\": \"int\", \"value\": 3}}}"
   ]
-  |> List.map (Json.Decode.decodeString (Runtime.Decode.taggedValue "asdf"))
+  |> List.map (Json.Decode.decodeString (Runtime.Decode.taggedValue ()))
 
 correctVal =
   [ Ok (IntVal 2)

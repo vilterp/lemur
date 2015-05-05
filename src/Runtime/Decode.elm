@@ -17,17 +17,17 @@ updateAttrs tag =
       "start_call" ->
         object2 (\apId args -> RCT.StartCall { apId = apId, args = args })
           ("ap_id" := int)
-          ("args" := record "asfd")
+          ("args" := record ())
       "end_call" ->
         object1 (\results -> RCT.EndCall { results = results })
-          ("results" := record "asf")
+          ("results" := record ())
 
-record : String -> Decoder RV.Record
-record asdf =
-    dict (taggedValue "asf")
+record : () -> Decoder RV.Record
+record _ =
+    dict (taggedValue ())
 
-taggedValue : String -> Decoder RV.Value
-taggedValue u =
+taggedValue : () -> Decoder RV.Value
+taggedValue _ =
     ("tag" := string) `andThen` value
 
 value : String -> Decoder RV.Value
@@ -37,6 +37,6 @@ value tag =
     in case tag of
         "int" -> getVal RV.IntVal int
         "string" -> getVal RV.StringVal string
-        "list" -> getVal RV.ListVal <| list (taggedValue "asdf")
-        "record" -> getVal RV.RecordVal <| record "asdf"
+        "list" -> getVal RV.ListVal <| list (taggedValue ())
+        "record" -> getVal RV.RecordVal <| record ()
         "file" -> getVal RV.FileVal <| string
