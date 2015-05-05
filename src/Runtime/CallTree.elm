@@ -7,7 +7,7 @@ import List as L
 import Result as R
 import Debug
 
-type alias ApId = Int
+type alias ApId = String
 
 type DoneCallTree = 
   DoneCallTree DoneCallTreeAttrs

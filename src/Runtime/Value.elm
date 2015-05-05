@@ -12,3 +12,4 @@ type Value
   | ListVal (List Value)
   | RecordVal Record
   | FileVal FilePath
+  | FunctionVal

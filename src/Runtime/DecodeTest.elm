@@ -22,3 +22,7 @@ correctVal =
   , Ok (ListVal ([IntVal 2,IntVal 3]))
   , Ok (RecordVal (Dict.fromList [("bar",IntVal 3), ("foo",IntVal 2)]))
   ]
+
+testUpdates =
+  "[{\"msg\": \"start_call\", \"ap_id\": 0, \"args\": {\"n\": {\"tag\": \"int\", \"value\": 2}}}, {\"msg\": \"start_call\", \"ap_id\": 1, \"args\": {\"n\": {\"tag\": \"int\", \"value\": 1}}}, {\"msg\": \"end_call\", \"results\": {\"result\": {\"tag\": \"int\", \"value\": 1}}}, {\"msg\": \"start_call\", \"ap_id\": 2, \"args\": {\"n\": {\"tag\": \"int\", \"value\": 0}}}, {\"msg\": \"end_call\", \"results\": {\"result\": {\"tag\": \"int\", \"value\": 1}}}, {\"msg\": \"end_call\", \"results\": {\"result\": {\"tag\": \"int\", \"value\": 2}}}]"
+    |> Json.Decode.decodeString Runtime.Decode.updateList

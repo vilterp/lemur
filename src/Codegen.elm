@@ -40,7 +40,8 @@ getSrcPort graph (nodePath, slotId) =
 
 nodeToStmt : Module -> Graph -> (NodePath, Node) -> List AST.Statement
 nodeToStmt mod graph (nodePath, node) =
-    case node of
+    let nodeId = L.reverse nodePath |> L.head |> getMaybeOrCrash "empty nodePath"
+    in case node of
       ApNode funcId ->
           -- TODO: these don't necessarily line up, & some of them need
           -- to be from params to this func
@@ -51,10 +52,17 @@ nodeToStmt mod graph (nodePath, node) =
                   case getSrcPort graph inPortId of
                     Just outPort -> outPortToString outPort
                     Nothing -> inPortToString inPortId
-              paramVars = L.map getSrcVar <| L.map (\inSlot -> (nodePath, ApParamSlot inSlot))
-                                                   (func |> funcParams mod)
-              call = AST.FuncCall { func = AST.Variable (func |> funcName)
-                                  , args = L.map AST.Variable paramVars
+              -- `{"n": 2}`
+              argsDict = funcParams mod func
+                          |> L.map (\name -> (name, getSrcVar (nodePath, ApParamSlot name) |> AST.Variable))
+                          |> D.fromList
+                          |> AST.DictLiteral
+              -- `log_call(fun, apid, args_dict)`
+              call = AST.FuncCall { func = AST.Variable "log_call"
+                                  , args =  [ func |> funcName |> AST.Variable
+                                            , nodeId |> AST.StringLit
+                                            , argsDict
+                                            ]
                                   }
               resultVarName = nodePathToString nodePath
               callAssn = AST.VarAssn { varName = resultVarName

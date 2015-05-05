@@ -16,7 +16,7 @@ updateAttrs tag =
     case tag of
       "start_call" ->
         object2 (\apId args -> RCT.StartCall { apId = apId, args = args })
-          ("ap_id" := int)
+          ("ap_id" := string)
           ("args" := record ())
       "end_call" ->
         object1 (\results -> RCT.EndCall { results = results })
@@ -26,6 +26,8 @@ record : () -> Decoder RV.Record
 record _ =
     dict (taggedValue ())
 
+-- TODO: tagging everything like this makes the JSON horribly verbose.
+-- can't think of a way to disambiguate file paths otherwise, though.
 taggedValue : () -> Decoder RV.Value
 taggedValue _ =
     ("tag" := string) `andThen` value
@@ -40,3 +42,4 @@ value tag =
         "list" -> getVal RV.ListVal <| list (taggedValue ())
         "record" -> getVal RV.RecordVal <| record ()
         "file" -> getVal RV.FileVal <| string
+        "function" -> succeed RV.FunctionVal

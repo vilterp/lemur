@@ -26,7 +26,7 @@ helloMap =
               , BuiltinFunc { name = "Map"
                             , params = ["function", "list"]
                             , returnVals = ["mappedList"]
-                            , pythonCode = "def apply_single(item):\n  return function(item).values()[0]\nreturn {'mappedList': map(apply_single, list)}"
+                            , pythonCode = "arg_name = function.func_code.co_varnames[0]\ndef apply_single(item):\n  result = log_call(function, 'map_internal', {arg_name: item})\n  return result.values()[0]\nreturn {'mappedList': map(apply_single, list)}"
                             }
               )
             , ( "add_excl"
