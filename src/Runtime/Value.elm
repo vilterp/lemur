@@ -11,4 +11,4 @@ type Value
   | StringVal String
   | ListVal (List Value)
   | RecordVal Record
-  --| FileVal FilePath
+  | FileVal FilePath
