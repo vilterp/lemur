@@ -13,7 +13,6 @@ class EventEmitter:
 
 # the dreaded global variable
 events = EventEmitter()
-evt_list = []
 def add_to_list(evt):
   evt_list.append(evt)
 events.add_handler(add_to_list)
@@ -47,6 +46,11 @@ def log_call(function, ap_id, args):
     'results': tag_record(result)
   })
   return result
+
+def run_main(fun, args):
+  evt_list = []
+  result = log_call(fun, '_start', args)
+  return (evt_list, result)
 
 # for testing
 
