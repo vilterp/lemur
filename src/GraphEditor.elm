@@ -17,14 +17,12 @@ import Util exposing (..)
 
 import Model
 
-type alias State =
-    { intState : DI.InteractionState GEM.State GEM.Tag GEM.Action
-    , editorLoc : DW.CollageLocation
-    }
-
-type Action
-    = MouseUpdate (DW.CollageLocation, DW.PrimMouseEvent)
-    | ModuleUpdate Model.Module
+view : GEM.State -> Html.Html
+view state =
+    let dims = state.editorLoc.dims
+    in [D.render state.intState.diagram]
+          |> C.collage (round dims.width) (round dims.height)
+          |> Html.fromElement
 
 initState : GEM.State -> State
 initState state =
@@ -45,18 +43,3 @@ editorLocFunc windowDims =
                 , height = windowDims.height - 101
                 }
        }
-
-update : Action -> State -> State
-update action state =
-    case action of
-      MouseUpdate mouseEvt ->
-          { state | intState <- DI.update mouseEvt state.intState }
-      ModuleUpdate newMod ->
-          { state | intState <- DI.updateModel (\geState -> { geState | mod <- newMod }) state.intState }
-
-view : State -> Html.Html
-view state =
-    let dims = state.editorLoc.dims
-    in [D.render state.intState.diagram]
-          |> C.collage (round dims.width) (round dims.height)
-          |> Html.fromElement

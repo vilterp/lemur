@@ -1,6 +1,7 @@
 module Model where
 
 import Diagrams.Geom exposing (Point, Dims)
+import Diagrams.Wiring exposing (PrimMouseEvent)
 
 import Dict as D
 import Set
@@ -11,25 +12,38 @@ import String as S
 
 import Util exposing (..)
 
-{-
+-- Actions
+
 type Action
-    = ElemPanelAction ElementsPanel.Action
-    | GraphEditorAction GraphEditor.Action
+    = FilterElemPanel String
+    | WindowDimsChange Dims
+    | CanvasMouseEvt PrimMouseEvent
+    -- graph ops
+    | MoveNode NodePath Point
     | AddLambda
-    | AddApNode Model.FuncId
+    | AddApNode FuncId
+    | RemoveNode NodePath
+    | AddEdge Edge
+    | RemoveEdge Edge
+    | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
+    --
     | NoOp
 
--- TODO: tabs, multiple modules
-type alias State =
-    { mod : Module
-    , editingFn : Maybe FuncName
-    , elemPanelState : ElemPanelState
-    }
+type GraphEditorAction
+    = InternalAction GraphEditorInternalAction
+    | ExternalAction Action
 
-type alias ElemPanelState =
-    { filter : Maybe String }
+type GraphEditorInternalAction
+    = DragNodeStart { nodePath : NodePath, offset : Point }
+    | DragEdgeStart { fromPort : OutPortId, endPos : Point }
+    | PanStart { offset : Point }
+    | DragEdgeTo Point
+    | PanTo Point
+    | DragEnd
+    -- dropping into lambdas
+    | OverLambda NodePath
+    | NotOverLambda NodePath
 
--}
 -- MODULE
 
 type alias ModName = String

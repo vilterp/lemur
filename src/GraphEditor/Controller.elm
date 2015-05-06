@@ -15,19 +15,19 @@ import Util exposing (..)
 posNodeActions nodePath dragState =
     case dragState of
       Nothing -> { emptyActionSet | mouseDown <- Just <| stopBubbling <|
-                                      \(MouseEvent evt) -> DragNodeStart { nodePath = nodePath, offset = evt.offset } }
+                                      \(MouseEvent evt) -> InternalAction <| DragNodeStart { nodePath = nodePath, offset = evt.offset } }
       _ -> emptyActionSet
 
-nodeXOutActions nodePath = { emptyActionSet | click <- Just <| keepBubbling <| always <| RemoveNode nodePath }
+nodeXOutActions nodePath = { emptyActionSet | click <- Just <| keepBubbling <| always <| ExternalAction <| RemoveNode nodePath }
 
-edgeXOutActions edge = { emptyActionSet | click <- Just <| keepBubbling <| always <| RemoveEdge edge }
+edgeXOutActions edge = { emptyActionSet | click <- Just <| keepBubbling <| always <| ExternalAction <| RemoveEdge edge }
 
 topLevelActions state =
     case state.dragState of
       Just (DragPanning _) ->
           { emptyActionSet | mouseMove <- Just <|
-                                keepBubbling <| \(MouseEvent evt) -> DragMove evt.offset
-                           , mouseUp <- Just <| stopBubbling <| always DragEnd }
+                                keepBubbling <| \(MouseEvent evt) -> InternalAction <| PanTo evt.offset
+                           , mouseUp <- Just <| stopBubbling <| always <| InternalAction DragEnd }
       _ -> emptyActionSet
 
 canvasActions nodePath dragState =
@@ -35,25 +35,32 @@ canvasActions nodePath dragState =
       Nothing ->
           if nodePath == []
           then { emptyActionSet | mouseDown <- Just <|
-                  stopBubbling <| \(MouseEvent evt) -> PanStart { offset = evt.offset } }
+                  stopBubbling <| \(MouseEvent evt) -> InternalAction <| PanStart { offset = evt.offset } }
           else emptyActionSet
       Just dragging ->
-          let moveAndUp = { emptyActionSet | mouseMove <- Just <|
-                                                stopBubbling <| \(MouseEvent evt) -> DragMove evt.offset
-                                           , mouseUp <- Just <| stopBubbling <| always DragEnd }
+          let moveAndUp isNode =
+                { emptyActionSet | mouseMove <- 
+                                      (\(MouseEvent evt) -> if isNode
+                                                            then ExternalAction <| MoveNode nodePath evt.offset
+                                                            else InternalAction <| DragEdgeTo evt.offset)
+                                        |> stopBubbling |> Just
+                                 , mouseUp <- Just <| stopBubbling <| always DragEnd }
           in case dragging of
                DraggingNode attrs ->
-                  if | attrs.nodePath `directlyUnder` nodePath -> moveAndUp 
+                  if | attrs.nodePath `directlyUnder` nodePath -> moveAndUp True
                      | attrs.nodePath `atOrAbove` nodePath ->
-                          { emptyActionSet | mouseEnter <- Just <| keepBubbling <| always <| OverLambda nodePath
-                                           , mouseLeave <- Just <| keepBubbling <| always <| NotOverLambda nodePath
+                          { emptyActionSet | mouseEnter <- Just <| keepBubbling <| always <| InternalAction <| OverLambda nodePath
+                                           , mouseLeave <- Just <| keepBubbling <| always <| InternalAction <| NotOverLambda nodePath
                                            , mouseUp <- Just <| keepBubbling <|
-                                              (\(MouseEvent evt) -> DropNodeInLambda { lambdaPath = nodePath
-                                                                                     , droppedNodePath = attrs.nodePath
-                                                                                     , posInLambda = evt.offset }) }
+                                              (\(MouseEvent evt) -> ExternalAction <|
+                                                    DropNodeInLambda { lambdaPath = nodePath
+                                                                     , droppedNodePath = attrs.nodePath
+                                                                     , posInLambda = evt.offset }) }
                      | otherwise -> emptyActionSet
                DraggingEdge attrs ->
-                  if nodePath == [] then moveAndUp else emptyActionSet
+                  if nodePath == []
+                  then moveAndUp False
+                  else emptyActionSet
                _ -> emptyActionSet
 
 atOrAbove xs ys = (xs /= ys) && (L.length xs <= L.length ys)
@@ -66,7 +73,7 @@ outPortActions state portId =
     if outPortState state portId == NormalPort
     then { emptyActionSet | mouseDown <- Just <| stopBubbling <|
               (\evt -> case mousePosAtPath evt [TopLevel, Canvas] of
-                         Just pos -> DragEdgeStart { fromPort = portId, endPos = pos }
+                         Just pos -> InternalAction <| DragEdgeStart { fromPort = portId, endPos = pos }
                          Nothing -> Debug.crash "mouse pos not found derp") }
     else emptyActionSet
 
@@ -76,13 +83,13 @@ inPortActions state portId =
     in case state.dragState of
          Just (DraggingEdge attrs) -> if portState == ValidPort
                                       then { emptyActionSet | mouseUp <- Just <| stopBubbling
-                                                <| always <| AddEdge { from = attrs.fromPort, to = portId } }
+                                                <| always <| ExternalAction <| AddEdge { from = attrs.fromPort, to = portId } }
                                       else emptyActionSet
          _ -> emptyActionSet
 
 -- process 'em...
 
-update : Action -> State -> State
+update : GraphEditorInternalAction -> State -> State
 update action state =
     case action of
       -- dragging
@@ -90,27 +97,18 @@ update action state =
       DragEdgeStart attrs -> { state | dragState <- Just <|
           DraggingEdge { attrs | upstreamNodes = upstreamNodes (state |> getGraph) (fst attrs.fromPort) } }
       PanStart {offset} -> { state | dragState <- Just <| DragPanning { offset = offset } }
-      DragMove mousePos ->
+      PanTo point ->
           case state.dragState of
-            Just (DraggingNode attrs) ->
-                updateGraph state <| moveNode attrs.nodePath (mousePos `pointSubtract` attrs.offset)
+            Just (DragPanning {offset}) ->
+                { state | pan <- mousePos `pointSubtract` offset }
+            _ -> Debug.crash "unexpected event"
+      DragEdgeTo point ->
+          case state.dragState of
             Just (DraggingEdge attrs) ->
                 { state | dragState <-
                             Just <| DraggingEdge { attrs | endPos <- mousePos } }
-            Just (DragPanning {offset}) ->
-                { state | pan <- mousePos `pointSubtract` offset }
-            Nothing -> state
-            _ -> state
+            _ -> Debug.crash "unexpected event"
       DragEnd -> { state | dragState <- Nothing }
-      -- add and remove
-      AddNode posNode ->
-          updateGraph state <| addNode [posNode.id] posNode
-      RemoveNode nodePath ->
-          updateGraph state <| removeNode nodePath
-      AddEdge edge ->
-          updateGraph { state | dragState <- Nothing } <| addEdge edge
-      RemoveEdge edge ->
-          updateGraph state <| removeEdge edge
       -- drag into lambdas
       OverLambda lambdaPath ->
           case state.dragState of
@@ -124,7 +122,3 @@ update action state =
                 let ds = state.dragState
                 in { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode <- Nothing } }
             _ -> Debug.crash "unexpected event"
-      DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
-          if canBeDroppedInLambda (state |> getGraph) lambdaPath droppedNodePath
-          then updateGraph state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
-          else state
