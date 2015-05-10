@@ -3,34 +3,25 @@ module GraphEditor where
 import Debug
 
 import Html
-import Graphics.Collage as C
+import Graphics.Collage
 
 import Diagrams.Interact as DI
 import Diagrams.Geom as DG
 import Diagrams.Core as D
 import Diagrams.Wiring as DW
 
-import GraphEditor.Model as GEM
 import GraphEditor.View as GEV
-import GraphEditor.Controller as GEC
 import Util exposing (..)
 
-import Model
+import Model exposing (..)
 
-view : GEM.State -> Html.Html
+view : Model.State -> Html.Html
 view state =
-    let dims = state.editorLoc.dims
-    in [D.render state.intState.diagram]
-          |> C.collage (round dims.width) (round dims.height)
+    let geState = state.graphEditorState
+        dims = geState.collageDims
+    in [D.render geState.diagram]
+          |> Graphics.Collage.collage (round dims.width) (round dims.height)
           |> Html.fromElement
-
-initState : GEM.State -> State
-initState state =
-    { intState = DI.initInteractState GEC.update GEV.viewGraph state
-    -- BUG: this is specific to my 13" macbook pro screen, with full screen chrome.
-    -- need to look at window dims on startup
-    , editorLoc = editorLocFunc { width = 1280, height = 701 }
-    }
 
 -- TODO: make this in pre-panned space
 defaultPos = (0, 0)
@@ -43,3 +34,43 @@ editorLocFunc windowDims =
                 , height = windowDims.height - 101
                 }
        }
+
+update : GraphEditorInternalAction -> State -> State
+update action state =
+   let geState = state.graphEditorState
+       dragState = geState.dragState
+       updateDragState : Maybe DraggingState -> State
+       updateDragState mds =
+           { state | graphEditorState <- { geState | dragState <- mds } }
+   in case action of
+     -- dragging
+     DragNodeStart attrs ->
+         updateDragState <| Just <| DraggingNode { attrs | overLambdaNode = Nothing }
+     DragEdgeStart attrs ->
+         updateDragState <| Just <|
+             DraggingEdge { attrs | upstreamNodes = upstreamNodes (state |> getCurrentGraph) (fst attrs.fromPort) }
+     PanStart {offset} ->
+         updateDragState <| Just <| DragPanning { offset = offset }
+     PanTo point ->
+         case state.graphEditorState.dragState of
+           Just (DragPanning {offset}) ->
+               { state | graphEditorState <- { geState | pan <- point `DG.pointSubtract` offset } }
+           _ -> Debug.crash "unexpected event"
+     DragEdgeTo mousePos ->
+         case state.graphEditorState.dragState of
+           Just (DraggingEdge attrs) ->
+               updateDragState <| Just <| DraggingEdge { attrs | endPos <- mousePos }
+           _ -> Debug.crash "unexpected event"
+     DragEnd -> 
+         updateDragState Nothing
+     -- drag into lambdas
+     OverLambda lambdaPath ->
+         case state.graphEditorState.dragState of
+           Just (DraggingNode attrs) ->
+               updateDragState <| Just <| DraggingNode { attrs | overLambdaNode <- Just lambdaPath }
+           _ -> Debug.crash "unexpected event"
+     NotOverLambda lambdaPath ->
+         case state.graphEditorState.dragState of
+           Just (DraggingNode attrs) ->
+               updateDragState <| Just <| DraggingNode { attrs | overLambdaNode <- Nothing }
+           _ -> Debug.crash "unexpected event"

@@ -4,7 +4,7 @@ import Text as T
 import Graphics.Collage as C
 import Color
 
-import GraphEditor.Model exposing (..)
+import Model exposing (..)
 
 defaultTextStyle = T.defaultStyle
 titleStyle = { defaultTextStyle | bold <- True }

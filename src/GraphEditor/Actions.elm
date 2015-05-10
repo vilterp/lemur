@@ -1,4 +1,4 @@
-module GraphEditor.Controller where
+module GraphEditor.Actions where
 
 import Debug
 
@@ -9,7 +9,6 @@ import Diagrams.Geom exposing (..)
 import Diagrams.Actions exposing (..)
 
 import Model exposing (..)
-import GraphEditor.Model exposing (..)
 import Util exposing (..)
 
 posNodeActions nodePath dragState =
@@ -18,18 +17,20 @@ posNodeActions nodePath dragState =
                                       \(MouseEvent evt) -> InternalAction <| DragNodeStart { nodePath = nodePath, offset = evt.offset } }
       _ -> emptyActionSet
 
+nodeXOutActions : NodePath -> ActionSet Tag GraphEditorAction
 nodeXOutActions nodePath = { emptyActionSet | click <- Just <| keepBubbling <| always <| ExternalAction <| RemoveNode nodePath }
 
 edgeXOutActions edge = { emptyActionSet | click <- Just <| keepBubbling <| always <| ExternalAction <| RemoveEdge edge }
 
 topLevelActions state =
-    case state.dragState of
+    case state.graphEditorState.dragState of
       Just (DragPanning _) ->
           { emptyActionSet | mouseMove <- Just <|
                                 keepBubbling <| \(MouseEvent evt) -> InternalAction <| PanTo evt.offset
                            , mouseUp <- Just <| stopBubbling <| always <| InternalAction DragEnd }
       _ -> emptyActionSet
 
+canvasActions : NodePath -> Maybe DraggingState -> ActionSet Tag GraphEditorAction
 canvasActions nodePath dragState =
     case dragState of
       Nothing ->
@@ -44,7 +45,7 @@ canvasActions nodePath dragState =
                                                             then ExternalAction <| MoveNode nodePath evt.offset
                                                             else InternalAction <| DragEdgeTo evt.offset)
                                         |> stopBubbling |> Just
-                                 , mouseUp <- Just <| stopBubbling <| always DragEnd }
+                                 , mouseUp <- Just <| stopBubbling <| always <| InternalAction <| DragEnd }
           in case dragging of
                DraggingNode attrs ->
                   if | attrs.nodePath `directlyUnder` nodePath -> moveAndUp True
@@ -68,7 +69,7 @@ atOrAbove xs ys = (xs /= ys) && (L.length xs <= L.length ys)
 directlyUnder xs ys = L.length xs - 1 == L.length ys
 
 -- TODO: check state
-outPortActions : State -> OutPortId -> ActionSet Tag Action
+outPortActions : State -> OutPortId -> ActionSet Tag GraphEditorAction
 outPortActions state portId =
     if outPortState state portId == NormalPort
     then { emptyActionSet | mouseDown <- Just <| stopBubbling <|
@@ -77,48 +78,13 @@ outPortActions state portId =
                          Nothing -> Debug.crash "mouse pos not found derp") }
     else emptyActionSet
 
-inPortActions : State -> InPortId -> ActionSet Tag Action
+inPortActions : State -> InPortId -> ActionSet Tag GraphEditorAction
 inPortActions state portId =
     let portState = inPortState state portId
-    in case state.dragState of
-         Just (DraggingEdge attrs) -> if portState == ValidPort
-                                      then { emptyActionSet | mouseUp <- Just <| stopBubbling
-                                                <| always <| ExternalAction <| AddEdge { from = attrs.fromPort, to = portId } }
-                                      else emptyActionSet
-         _ -> emptyActionSet
-
--- process 'em...
-
-update : GraphEditorInternalAction -> State -> State
-update action state =
-    case action of
-      -- dragging
-      DragNodeStart attrs -> { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode = Nothing } }
-      DragEdgeStart attrs -> { state | dragState <- Just <|
-          DraggingEdge { attrs | upstreamNodes = upstreamNodes (state |> getGraph) (fst attrs.fromPort) } }
-      PanStart {offset} -> { state | dragState <- Just <| DragPanning { offset = offset } }
-      PanTo point ->
-          case state.dragState of
-            Just (DragPanning {offset}) ->
-                { state | pan <- mousePos `pointSubtract` offset }
-            _ -> Debug.crash "unexpected event"
-      DragEdgeTo point ->
-          case state.dragState of
-            Just (DraggingEdge attrs) ->
-                { state | dragState <-
-                            Just <| DraggingEdge { attrs | endPos <- mousePos } }
-            _ -> Debug.crash "unexpected event"
-      DragEnd -> { state | dragState <- Nothing }
-      -- drag into lambdas
-      OverLambda lambdaPath ->
-          case state.dragState of
-            Just (DraggingNode attrs) ->
-                let ds = state.dragState
-                in { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode <- Just lambdaPath } }
-            _ -> Debug.crash "unexpected event"
-      NotOverLambda lambdaPath ->
-          case state.dragState of
-            Just (DraggingNode attrs) ->
-                let ds = state.dragState
-                in { state | dragState <- Just <| DraggingNode { attrs | overLambdaNode <- Nothing } }
-            _ -> Debug.crash "unexpected event"
+    in case state.graphEditorState.dragState of
+        Just (DraggingEdge attrs) ->
+            if portState == ValidPort
+            then { emptyActionSet | mouseUp <- Just <| stopBubbling
+                      <| always <| ExternalAction <| AddEdge { from = attrs.fromPort, to = portId } }
+            else emptyActionSet
+        _ -> emptyActionSet
