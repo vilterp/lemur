@@ -191,9 +191,9 @@ getInPortCoords nodesDia outPort =
 
 getEdgeCoords : GEDiagram -> Edge -> { from : Point, to : Point }
 getEdgeCoords nodesDia edg =
-  { from = getOutPortCoords nodesDia edg.from
-  , to = getInPortCoords nodesDia edg.to
-  }
+    { from = getOutPortCoords nodesDia edg.from
+    , to = getInPortCoords nodesDia edg.to
+    }
 
 viewEdgeXOut : GEDiagram -> Edge -> GEDiagram
 viewEdgeXOut nodesDia edge =
@@ -203,9 +203,11 @@ viewEdgeXOut nodesDia edge =
 viewGraph : State -> GEDiagram
 viewGraph state = 
     -- TODO: draw lambda nodes under other nodes
-    let nodes = zcat <| L.map (viewPosNode state []) <| D.values (state |> getCurrentGraph).nodes
-        edges = zcat <| L.map (viewEdge nodes) (state |> getCurrentGraph).edges
-        edgeXOuts = zcat <| L.map (viewEdgeXOut nodes) (state |> getCurrentGraph).edges
+    let graph = state |> getCurrentGraph
+        --g = Debug.log "graph" graph.nodes
+        nodes = zcat <| L.map (viewPosNode state []) <| D.values graph.nodes
+        edges = zcat <| L.map (viewEdge nodes) graph.edges
+        edgeXOuts = zcat <| L.map (viewEdgeXOut nodes) graph.edges
         draggingEdge = case state.graphEditorState.dragState of
                          Just (DraggingEdge attrs) -> [viewDraggingEdge attrs.fromPort nodes attrs.endPos]
                          _ -> []

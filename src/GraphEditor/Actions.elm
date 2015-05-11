@@ -39,30 +39,30 @@ canvasActions nodePath dragState =
                   stopBubbling <| \(MouseEvent evt) -> InternalAction <| PanStart { offset = evt.offset } }
           else emptyActionSet
       Just dragging ->
-          let moveAndUp isNode =
-                { emptyActionSet | mouseMove <- 
-                                      (\(MouseEvent evt) -> if isNode
-                                                            then ExternalAction <| MoveNode nodePath evt.offset
-                                                            else InternalAction <| DragEdgeTo evt.offset)
-                                        |> stopBubbling |> Just
+          case dragging of
+            DraggingNode attrs ->
+               if | attrs.nodePath `directlyUnder` nodePath ->
+                        { emptyActionSet | mouseMove <- 
+                                              (\(MouseEvent evt) -> ExternalAction <| MoveNode attrs.nodePath (evt.offset `pointSubtract` attrs.offset))
+                                                        |> stopBubbling |> Just
+                                         , mouseUp <- Just <| stopBubbling <| always <| InternalAction <| DragEnd }
+                  | attrs.nodePath `atOrAbove` nodePath ->
+                        { emptyActionSet | mouseEnter <- Just <| keepBubbling <| always <| InternalAction <| OverLambda nodePath
+                                         , mouseLeave <- Just <| keepBubbling <| always <| InternalAction <| NotOverLambda nodePath
+                                         , mouseUp <- Just <| keepBubbling <|
+                                            (\(MouseEvent evt) -> ExternalAction <|
+                                                  DropNodeInLambda { lambdaPath = nodePath
+                                                                   , droppedNodePath = attrs.nodePath
+                                                                   , posInLambda = evt.offset }) }
+                  | otherwise -> emptyActionSet
+            DraggingEdge attrs ->
+               if nodePath == []
+               then { emptyActionSet | mouseMove <- 
+                                          (\(MouseEvent evt) -> InternalAction <| DragEdgeTo evt.offset)
+                                                |> stopBubbling |> Just
                                  , mouseUp <- Just <| stopBubbling <| always <| InternalAction <| DragEnd }
-          in case dragging of
-               DraggingNode attrs ->
-                  if | attrs.nodePath `directlyUnder` nodePath -> moveAndUp True
-                     | attrs.nodePath `atOrAbove` nodePath ->
-                          { emptyActionSet | mouseEnter <- Just <| keepBubbling <| always <| InternalAction <| OverLambda nodePath
-                                           , mouseLeave <- Just <| keepBubbling <| always <| InternalAction <| NotOverLambda nodePath
-                                           , mouseUp <- Just <| keepBubbling <|
-                                              (\(MouseEvent evt) -> ExternalAction <|
-                                                    DropNodeInLambda { lambdaPath = nodePath
-                                                                     , droppedNodePath = attrs.nodePath
-                                                                     , posInLambda = evt.offset }) }
-                     | otherwise -> emptyActionSet
-               DraggingEdge attrs ->
-                  if nodePath == []
-                  then moveAndUp False
-                  else emptyActionSet
-               _ -> emptyActionSet
+               else emptyActionSet
+            _ -> emptyActionSet
 
 atOrAbove xs ys = (xs /= ys) && (L.length xs <= L.length ys)
 

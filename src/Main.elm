@@ -30,9 +30,15 @@ import TestData
 
 -- CONTROLLER
 
+upGraphAndRender : State -> (Graph -> Result String Graph) -> State
+upGraphAndRender state upFun =
+    let newState = updateCurrentGraph state upFun
+        geState = newState.graphEditorState
+    in { newState | graphEditorState <- { geState | diagram <- GE.render newState } }
+
 update : Action -> State -> State
 update action state =
-    case Debug.watch "act" action of
+    case Debug.log "act" action of
       FilterElemPanel filter ->
           { state | elemPanelFilter <- filter }
       CanvasMouseEvt (collageLoc, primMouseEvt) ->
@@ -56,18 +62,18 @@ update action state =
           in { state | graphEditorState <- { newGEState | diagram <- GE.render newState } }
       -- add and remove
       MoveNode nodePath point ->
-          updateCurrentGraph state <| moveNode nodePath point
+          upGraphAndRender state <| moveNode nodePath point
       AddLambda -> state -- TODO
       AddApNode funcId -> state -- TODO
       RemoveNode nodePath ->
-          updateCurrentGraph state <| removeNode nodePath
+          upGraphAndRender state <| removeNode nodePath
       AddEdge edge ->
-          updateCurrentGraph state <| addEdge edge
+          upGraphAndRender state <| addEdge edge
       RemoveEdge edge ->
-          updateCurrentGraph state <| removeEdge edge
+          upGraphAndRender state <| removeEdge edge
       DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
           if canBeDroppedInLambda (state |> getCurrentGraph) lambdaPath droppedNodePath
-          then updateCurrentGraph state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
+          then upGraphAndRender state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
           else state
       -- 
       NoOp -> state
