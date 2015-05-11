@@ -7,7 +7,7 @@ import Graphics.Collage
 
 import Diagrams.Interact as DI
 import Diagrams.Geom as DG
-import Diagrams.Core as D
+import Diagrams.Core as DC
 import Diagrams.Wiring as DW
 
 import GraphEditor.View as GEV
@@ -19,13 +19,24 @@ view : Model.State -> Html.Html
 view state =
     let geState = state.graphEditorState
         dims = geState.collageDims
-    in [D.render geState.diagram]
+    in [DC.render geState.diagram]
           |> Graphics.Collage.collage (round dims.width) (round dims.height)
           |> Html.fromElement
+
+
+initState : GraphEditorState
+initState =
+    { diagram = DC.empty -- ...
+    , mouseState = DI.initMouseState
+    , collageDims = { width = 500, height = 500 } -- ...
+    , dragState = Nothing
+    , pan = (0, 0)
+    }
 
 -- TODO: make this in pre-panned space
 defaultPos = (0, 0)
 
+-- TODO: need to recalibrate this
 editorLocFunc : DW.CollageLocFunc
 editorLocFunc windowDims =
     let d = Debug.log "dims" windowDims

@@ -150,7 +150,7 @@ funcReturnVals mod func =
             |> L.map outPortToString
 
 -- TODO: can't figure out how to use extensible records here
-funcName : Func -> ModName
+funcName : Func -> FuncName
 funcName func =
     case func of
       UserFunc attrs -> attrs.name
@@ -392,8 +392,8 @@ freeOutPorts mod graph pathAbove =
 -- graph editor stuff (can't figure out how to move this to its own module)
 
 type alias GraphEditorState =
-    { diagram : DC.Diagram Tag Action
-    , mouseState : DI.MouseState Tag Action
+    { diagram : DC.Diagram Tag GraphEditorAction
+    , mouseState : DI.MouseState Tag GraphEditorAction
     , collageDims : Dims
     , dragState : Maybe DraggingState
     , pan : Point

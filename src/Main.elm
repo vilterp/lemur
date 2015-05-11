@@ -6,101 +6,87 @@ import Html.Attributes exposing (..)
 import Signal as S
 import Debug
 import Dict as D
+import List as L
 import Maybe
 
-import Diagrams.Geom exposing as DG
+import Diagrams.Geom as DG
 import Diagrams.Wiring as DW
 import Diagrams.Interact as DI
 
+import Model exposing (..)
+import Util exposing (..)
+
+import ElementsPanel
+import ActionBar
 import GraphEditor as GE
-import GraphEditor.Model as GEM
-import GraphEditor.Controller as GEC
-import Model as M
+import CommonView exposing (..)
+
+import TestData
 
 -- MODEL
 
 -- TODO: tabs, multiple modules
-type alias State =
-    { mod : Module
-    , editingFn : M.FuncName
-    , graphEditorState : GE.State
-    , elemPanelFilter : String
-    }
 
 -- CONTROLLER
 
 update : Action -> State -> State
 update action state =
-    case action of
+    case Debug.watch "act" action of
       FilterElemPanel filter ->
           { state | elemPanelFilter <- filter }
       WindowDimsChange newDims ->
           let geState = state.graphEditorState
           in { state | graphEditorState <- { geState | collageDims <- newDims } }
       CanvasMouseEvt primMouseEvt ->
-          let actions = DI.processMouseEvent state.graphEditorState.diagram
-                                             state.graphEditorState.mouseState
-                                             primMouseEvt
-              process action state =
-                  case action of
-                    InternalAction act ->
-                        { state | graphEditorState <- GEC.update act state.graphEditorState }
-                    ExternalAction act ->
-                        update act state
-          in L.foldr process state actions
-      GraphEditorEvt action ->
-          { state | graphEditorState <- GEC.update action state.graphEditorState }
+          --state
+          -- (newMS, actions)
+          let res =
+                  DI.processMouseEvent 
+                      state.graphEditorState.diagram
+                      state.graphEditorState.mouseState
+                      primMouseEvt
+              actions : List GraphEditorAction
+              actions = snd res
+              newMS : DI.MouseState Tag GraphEditorAction
+              newMS = fst res
+              process : GraphEditorAction -> State -> State
+              process act state =
+                    case act of
+                      InternalAction intAct ->
+                          GE.update intAct state
+                      ExternalAction extAct ->
+                          update extAct state
+              geState = state.graphEditorState
+              newMSState = { state | graphEditorState <- { geState | mouseState <- newMS } }
+          in L.foldr process newMSState actions
       -- add and remove
       AddLambda -> state -- TODO
-      AddApNode Model.FuncId -> state -- TODO
+      AddApNode funcId -> state -- TODO
       RemoveNode nodePath ->
-          updateGraph state <| M.removeNode nodePath
+          updateCurrentGraph state <| removeNode nodePath
       AddEdge edge ->
-          updateGraph { state | dragState <- Nothing } <| M.addEdge edge
+          updateCurrentGraph state <| addEdge edge
       RemoveEdge edge ->
-          updateGraph state <| M.removeEdge edge
+          updateCurrentGraph state <| removeEdge edge
       DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
-          if M.canBeDroppedInLambda (state |> getGraph) lambdaPath droppedNodePath
-          then updateGraph state <| M.moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
+          if canBeDroppedInLambda (state |> getCurrentGraph) lambdaPath droppedNodePath
+          then updateCurrentGraph state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
           else state
       -- 
       NoOp -> state
 
-
-getUserFunc : State -> UserFuncAttrs
-getUserFunc state =
-    case state.mod.userFuncs |> D.get state.editingFn of
-      Just (UserFunc attrs) -> attrs
-      Just (BuiltinFunc _) -> Debug.crash "builtin func supposed to be user func"
-      Nothing -> Debug.crash <| "no func found named " ++ state.editingFn
-
-getGraph : State -> Graph
-getGraph state =
-    getUserFunc state |> .graph
-
-updateGraph : State -> (Graph -> Result String Graph) -> State
-updateGraph state updateFun =
-    let mod = state.mod
-        newUFs = state.mod.userFuncs
-                  |> D.update state.funcName (\uFunc ->
-                      Maybe.map (\(UserFunc attrs) ->
-                          UserFunc { attrs | graph <- updateFun attrs.graph |> getOrCrash }) uFunc)
-    in { state | mod <- { mod | userFuncs <- newUFs } }
-
-
 -- VIEW
 
-view : S.Address Update -> State -> Html
+view : S.Address Action -> State -> Html
 view updates state =
-    let elemPanelUpdates = S.forwardTo updates ElemPanelUpdate
-    in div
-        [ id "app" ]
-        [ topSection
-        , ActionBar.view updates state
-        , ElementsPanel.view elemPanelUpdates state.sidebarState
-        , centerSection state
-        , rightSection
-        ]
+    div
+      [ id "app" ]
+      [ topSection
+      , ActionBar.view htmlUpdates.address state
+      , ElementsPanel.view htmlUpdates.address state
+      , centerSection state
+      , rightSection
+      ]
 
 -- TODO: probably split each section into its own module with model, view, and controller
 
@@ -111,12 +97,7 @@ topSection =
     div
       [ id "top" ]
       [ div [ id "logo" ] [ text "VisualFP" ]
-      , div [ class "breadcrumbs" ]
-          [ div [ class "breadcrumb" ] [ text "EasySIM" ]
-          , div [ class "breadcrumb breadcrumb-sep" ] [ text ">" ]
-          , div [ class "breadcrumb" ]
-              [ elementLabel { typ = Workflow, name = "Demo" } ]
-          ]
+      -- TODO: breadcrumbs
       , div [ id "user-state" ]
           [ div [ id "prof-pic" ] [ text "PV" ]
           , div [ id "username" ] [ text "vilterp" ]
@@ -133,26 +114,16 @@ centerSection : State -> Html
 centerSection state =
     div
       [ id "center" ]
-      [ div
-          [ class "panel-header tabs" ]
-          [ tab { typ = Workflow, name = "Demo" } True
-          , tab { typ = App, name = "DSSAT" } False
-          , tab { typ = Datatype, name = "PSims Weather" } False
-          ]
-      , div
+      [ -- TODO: tabs
+        div
           [ class "center-scroll" ]
           [ div
               [ id "canvas-viewport"
               , style [("width", "100%"), ("height", "100%")]
               ]
-              [GraphEditor.view state.graphState]
+              [ GE.view state ]
           ]
       ]
-
-tab : ModuleElement -> Bool -> Html
-tab elem selected =
-  let className = if selected then "tab selected" else "tab"
-  in div [ class className ] [ elementLabel elem ]
 
 -- RIGHT SECTION
 
@@ -175,15 +146,24 @@ lipsum2 = "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusa
 
 -- wiring
 
+initState : State
+initState =
+    { mod = TestData.helloMap
+    , editingFn = "main"
+    , graphEditorState = GE.initState
+    , elemPanelFilter = ""
+    }
+
 htmlUpdates = S.mailbox Model.NoOp
 
 windowUpdates = S.map Model.WindowDimsChange DW.floatWindowDims
 
+updates : S.Signal Action
 updates = S.merge windowUpdates htmlUpdates.signal
 
 state : Signal State
-state = S.foldp Shell.update Shell.initState updates
+state = S.foldp update initState updates
 
 main : Signal Html
 main =
-  S.map (Shell.view htmlUpdates.address) state
+  S.map (view htmlUpdates.address) state
