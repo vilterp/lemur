@@ -9,6 +9,7 @@ import Dict as D
 import List as L
 import Maybe
 
+import Diagrams.Core as DC
 import Diagrams.Geom as DG
 import Diagrams.Wiring as DW
 import Diagrams.Interact as DI
@@ -34,32 +35,28 @@ update action state =
     case Debug.watch "act" action of
       FilterElemPanel filter ->
           { state | elemPanelFilter <- filter }
-      WindowDimsChange newDims ->
-          let geState = state.graphEditorState
-          in { state | graphEditorState <- { geState | collageDims <- newDims } }
-      CanvasMouseEvt primMouseEvt ->
-          --state
-          -- (newMS, actions)
-          let res =
+      CanvasMouseEvt (collageLoc, primMouseEvt) ->
+          let (newMS, actions) =
                   DI.processMouseEvent 
                       state.graphEditorState.diagram
                       state.graphEditorState.mouseState
                       primMouseEvt
-              actions : List GraphEditorAction
-              actions = snd res
-              newMS : DI.MouseState Tag GraphEditorAction
-              newMS = fst res
               process : GraphEditorAction -> State -> State
               process act state =
-                    case act of
+                    case Debug.log "ge act" act of
                       InternalAction intAct ->
                           GE.update intAct state
                       ExternalAction extAct ->
                           update extAct state
               geState = state.graphEditorState
-              newMSState = { state | graphEditorState <- { geState | mouseState <- newMS } }
-          in L.foldr process newMSState actions
+              newMSState = { state | graphEditorState <- { geState | mouseState <- newMS
+                                                                   , collageLoc <- collageLoc } }
+              newState = L.foldr process newMSState actions
+              newGEState = newState.graphEditorState
+          in { state | graphEditorState <- { newGEState | diagram <- GE.render newState } }
       -- add and remove
+      MoveNode nodePath point ->
+          updateCurrentGraph state <| moveNode nodePath point
       AddLambda -> state -- TODO
       AddApNode funcId -> state -- TODO
       RemoveNode nodePath ->
@@ -82,8 +79,8 @@ view updates state =
     div
       [ id "app" ]
       [ topSection
-      , ActionBar.view htmlUpdates.address state
-      , ElementsPanel.view htmlUpdates.address state
+      , ActionBar.view updates state
+      , ElementsPanel.view updates state
       , centerSection state
       , rightSection
       ]
@@ -156,10 +153,19 @@ initState =
 
 htmlUpdates = S.mailbox Model.NoOp
 
-windowUpdates = S.map Model.WindowDimsChange DW.floatWindowDims
+editorLocFunc : DW.CollageLocFunc
+editorLocFunc windowDims =
+    let d = Debug.log "dims" windowDims
+    in { offset = (252, 101)
+       , dims = { width = windowDims.width - 501
+                , height = windowDims.height - 101
+                }
+       }
+
+collageEvents = DW.makeUpdateStream editorLocFunc |> S.map CanvasMouseEvt
 
 updates : S.Signal Action
-updates = S.merge windowUpdates htmlUpdates.signal
+updates = S.merge collageEvents htmlUpdates.signal
 
 state : Signal State
 state = S.foldp update initState updates

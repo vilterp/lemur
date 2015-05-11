@@ -9,7 +9,7 @@ import String as S
 import Debug
 
 import Diagrams.Geom exposing (Point, Dims)
-import Diagrams.Wiring exposing (PrimMouseEvent)
+import Diagrams.Wiring exposing (CollageLocation, PrimMouseEvent)
 import Diagrams.Core as DC
 import Diagrams.Interact as DI
 
@@ -27,8 +27,7 @@ type alias State =
 
 type Action
     = FilterElemPanel String
-    | WindowDimsChange Dims
-    | CanvasMouseEvt PrimMouseEvent
+    | CanvasMouseEvt (CollageLocation, PrimMouseEvent)
     -- graph ops
     | MoveNode NodePath Point
     | AddLambda
@@ -394,7 +393,7 @@ freeOutPorts mod graph pathAbove =
 type alias GraphEditorState =
     { diagram : DC.Diagram Tag GraphEditorAction
     , mouseState : DI.MouseState Tag GraphEditorAction
-    , collageDims : Dims
+    , collageLoc : CollageLocation
     , dragState : Maybe DraggingState
     , pan : Point
     }

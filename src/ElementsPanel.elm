@@ -39,6 +39,6 @@ modElementView chan (funcId, func) =
       [ class "module-element"
       , onClick chan <| Model.AddApNode funcId 
       ]
-      [ elementIcon func
-      , text <| Model.funcName func
+      [ div [ class "element-icon" ] [ elementIcon func ]
+      , div [ class "element-label" ] [ text <| Model.funcName func ]
       ]

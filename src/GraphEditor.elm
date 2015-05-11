@@ -15,10 +15,13 @@ import Util exposing (..)
 
 import Model exposing (..)
 
+render : Model.State -> DC.Diagram Tag GraphEditorAction
+render state = GEV.viewGraph state
+
 view : Model.State -> Html.Html
 view state =
     let geState = state.graphEditorState
-        dims = geState.collageDims
+        dims = geState.collageLoc.dims
     in [DC.render geState.diagram]
           |> Graphics.Collage.collage (round dims.width) (round dims.height)
           |> Html.fromElement
@@ -28,23 +31,13 @@ initState : GraphEditorState
 initState =
     { diagram = DC.empty -- ...
     , mouseState = DI.initMouseState
-    , collageDims = { width = 500, height = 500 } -- ...
+    , collageLoc = { offset = (0, 0), dims = { width = 500, height = 500 } } -- ...
     , dragState = Nothing
     , pan = (0, 0)
     }
 
 -- TODO: make this in pre-panned space
 defaultPos = (0, 0)
-
--- TODO: need to recalibrate this
-editorLocFunc : DW.CollageLocFunc
-editorLocFunc windowDims =
-    let d = Debug.log "dims" windowDims
-    in { offset = (252, 101)
-       , dims = { width = windowDims.width - 501
-                , height = windowDims.height - 101
-                }
-       }
 
 update : GraphEditorInternalAction -> State -> State
 update action state =
