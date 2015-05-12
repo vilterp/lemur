@@ -1,0 +1,15 @@
+{
+  "name": "thesis",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vilterp/thesis.git"
+  },
+  "version": "0.0.0",
+  "description": "Swift + Galaxy",
+  "dependencies": {
+    "body-parser": "^1.12.4",
+    "express": "^4.12.3",
+    "morgan": "^1.5.3",
+    "tmp": "0.0.26"
+  }
+}
