@@ -18,7 +18,7 @@ events = EventEmitter()
 def add_to_list(evt):
   evt_list.append(evt)
 def print_evt_as_json(evt):
-  print json.dumps(evt)
+  sys.stdout.write(json.dumps(evt) + ';\n')
   sys.stdout.flush()
 events.add_handler(add_to_list)
 events.add_handler(print_evt_as_json)

@@ -53,8 +53,16 @@ app.post('/run_python', function(req, res) {
         python.stdout.on('data', function(data) {
           var line = data.slice(0, -1);
           console.log('python out:', line);
-          stdout_messages.push(line);
-          res.write(line);
+          var split = line.split(';');
+          for(var i=0; i < split.length; i++) {
+            var msg = split[i];
+            if(msg.length > 0) {
+              stdout_messages.push(msg);
+              var parsed = JSON.parse(msg); // just to validate
+              console.log(msg);
+              res.write(msg);
+            }
+          }
         });
         python.stderr.setEncoding('utf8');
         python.stderr.on('data', function(data) {
