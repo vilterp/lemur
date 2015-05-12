@@ -82,8 +82,6 @@ type alias BuiltinFuncAttrs =
 type alias UserFuncAttrs =
     { name : String
     , graph : Graph
-    , nextApId : Int
-    , nextLambdaId : Int
     }
 
 -- TODO: user func args are computed from graph
@@ -100,8 +98,6 @@ emptyUserFunc : FuncName -> Func
 emptyUserFunc name =
     UserFunc { name = name
              , graph = emptyGraph
-             , nextApId = 0
-             , nextLambdaId = 0
              }
 
 -- this mod is def getting crowded
@@ -189,6 +185,20 @@ updateCurrentGraph state updateFun =
                           UserFunc { attrs | graph <- updateFun attrs.graph |> getOrCrash }) uFunc)
     in { state | mod <- { mod | userFuncs <- newUFs } }
 
+getLambdaId : State -> (State, Int)
+getLambdaId state =
+    let lid = state |> getCurrentGraph |> .nextLambdaId
+    in ( updateCurrentGraph state (\graph -> Ok { graph | nextLambdaId <- lid + 1 })
+       , lid
+       )
+
+getApId : State -> (State, Int)
+getApId state =
+    let aid = state |> getCurrentGraph |> .nextApId
+    in ( updateCurrentGraph state (\graph -> Ok { graph | nextApId <- aid + 1 })
+       , aid
+       )
+
 -- GRAPH (TODO: maybe factor this out?)
 
 {- TODO: mark ports as results! (and as discarded?)
@@ -227,9 +237,17 @@ emptyLambdaNode =
 type alias Edge = { from : OutPortId, to : InPortId }
 
 type alias NodeDict = D.Dict NodeId PosNode
-type alias Graph = { nodes : NodeDict, edges : List Edge }
+type alias Graph = { nodes : NodeDict
+                   , edges : List Edge
+                   , nextApId : Int
+                   , nextLambdaId : Int
+                   }
 
-emptyGraph = { nodes = D.empty, edges = [] }
+emptyGraph = { nodes = D.empty
+             , edges = []
+             , nextApId = 0
+             , nextLambdaId = 0
+             }
 
 -- OPERATIONS
 

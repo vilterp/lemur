@@ -63,8 +63,22 @@ update action state =
       -- add and remove
       MoveNode nodePath point ->
           upGraphAndRender state <| moveNode nodePath point
-      AddLambda -> state -- TODO
-      AddApNode funcId -> state -- TODO
+      AddLambda ->
+          let (newState, lambdaIdNo) = getApId state
+              lambdaId = "lambda" ++ toString lambdaIdNo
+              posNode = { pos = defaultPos
+                        , id = lambdaId
+                        , node = emptyLambdaNode
+                        }
+          in upGraphAndRender newState <| addNode [lambdaId] posNode
+      AddApNode funcId ->
+          let (newState, apIdNo) = getLambdaId state
+              apId = "ap" ++ toString apIdNo
+              posNode = { pos = defaultPos
+                        , id = apId
+                        , node = ApNode funcId
+                        }
+          in upGraphAndRender newState <| addNode [apId] posNode
       RemoveNode nodePath ->
           upGraphAndRender state <| removeNode nodePath
       AddEdge edge ->
@@ -77,6 +91,8 @@ update action state =
           else state
       -- 
       NoOp -> state
+
+defaultPos = (0, 0)
 
 -- VIEW
 

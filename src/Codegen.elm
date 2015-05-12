@@ -97,6 +97,8 @@ nodeToStmt mod graph (nodePath, node) =
           let subGraph =
                 { nodes = attrs.nodes
                 , edges = graph.edges
+                , nextLambdaId = 0
+                , nextApId = 0
                 }
               bodyStmts = topSort subGraph
                             |> L.map (\(path, node) -> (nodePath ++ path, node))
