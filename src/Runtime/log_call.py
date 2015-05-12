@@ -1,4 +1,6 @@
 import types
+import json
+import sys
 
 class EventEmitter:
   def __init__(self):
@@ -15,7 +17,11 @@ class EventEmitter:
 events = EventEmitter()
 def add_to_list(evt):
   evt_list.append(evt)
+def print_evt_as_json(evt):
+  print json.dumps(evt)
+  sys.stdout.flush()
 events.add_handler(add_to_list)
+events.add_handler(print_evt_as_json)
 
 def tag_record(val):
   return {k: tag_value(v) for k, v in val.iteritems()}
@@ -48,6 +54,7 @@ def log_call(function, ap_id, args):
   return result
 
 def run_main(fun, args):
+  global evt_list
   evt_list = []
   result = log_call(fun, '_start', args)
   return (evt_list, result)

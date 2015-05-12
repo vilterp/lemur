@@ -5,6 +5,7 @@ var events = require('events');
 var child_process = require('child_process');
 var tmp = require('tmp');
 var fs = require('fs');
+var fs = require('fs-extra');
 // var multer = require('multer');
 
 var app = express();
@@ -30,46 +31,61 @@ app.get('/', function(req, res) {
 app.post('/run_python', function(req, res) {
   // TODO: get code field
   console.log(req.body);
-  tmp.file(function(err, path, fd, cleanupCallback) {
-    if(err) throw err;
 
-    console.log("File: ", path);
-    console.log("Filedescriptor: ", fd);
+  tmp.dir(function(err, path, cleanupCallback) {
+    if (err) throw err;
 
-    fs.writeFile(path, req.body.code, function(err) {
-      if(err) throw err;
+    console.log("Dir: ", path);
+    // ugh, that callback christmas tree... should have written in Go
+    var code_path = path + '/code.py'
+    var log_call_path = path + '/log_call.py'
+    fs.copy('src/Runtime/log_call.py', log_call_path, function (err) {
+      if (err) return console.error(err)
       
-      var stdout_messages = [];
-      var stderr_messages = []
+      fs.writeFile(code_path, req.body.code, function(err) {
+        if(err) throw err;
+        
+        var stdout_messages = [];
+        var stderr_messages = []
 
-      var python = child_process.spawn('python', [path]);
-      python.stdout.setEncoding('utf8');
-      python.stdout.on('data', function(data) {
-        var line = data.slice(0, -1);
-        console.log('python out:', line);
-        stdout_messages.push(line);
-      });
-      python.stderr.setEncoding('utf8');
-      python.stderr.on('data', function(data) {
-        var line = data.slice(0, -1);
-        console.log('python err:', line);
-        stderr_messages.push(line);
-      });
-
-      python.on('close', function(code, signal) {
-        console.log('exit code: ', code);
-
-        res.send({
-          stdout_messages: stdout_messages,
-          stderr_messages: stderr_messages
+        var python = child_process.spawn('python', [code_path]);
+        python.stdout.setEncoding('utf8');
+        python.stdout.on('data', function(data) {
+          var line = data.slice(0, -1);
+          console.log('python out:', line);
+          stdout_messages.push(line);
+        });
+        python.stderr.setEncoding('utf8');
+        python.stderr.on('data', function(data) {
+          var line = data.slice(0, -1);
+          console.log('python err:', line);
+          stderr_messages.push(line);
         });
 
-        cleanupCallback();
+        python.on('close', function(code, signal) {
+          console.log('exit code: ', code);
+
+          res.send({
+            stdout_messages: stdout_messages,
+            stderr_messages: stderr_messages
+          });
+
+          fs.unlinkSync(log_call_path);
+          fs.unlinkSync(code_path);
+          fs.unlinkSync(path + '/log_call.pyc'); // TODO: can I just glob somehow? or rm -rf?
+
+          console.log('contents:', fs.readdirSync(path));
+
+          cleanupCallback();
+
+        });
 
       });
 
     });
+
   });
+
 });
 
 // start it up
