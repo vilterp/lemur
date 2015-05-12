@@ -54,6 +54,7 @@ app.post('/run_python', function(req, res) {
           var line = data.slice(0, -1);
           console.log('python out:', line);
           stdout_messages.push(line);
+          res.write(line);
         });
         python.stderr.setEncoding('utf8');
         python.stderr.on('data', function(data) {
@@ -65,10 +66,7 @@ app.post('/run_python', function(req, res) {
         python.on('close', function(code, signal) {
           console.log('exit code: ', code);
 
-          res.send({
-            stdout_messages: stdout_messages,
-            stderr_messages: stderr_messages
-          });
+          res.end();
 
           fs.unlinkSync(log_call_path);
           fs.unlinkSync(code_path);
