@@ -58,8 +58,6 @@ helloMap =
           [ ("main"
             , UserFunc { name = "main"
                        , graph = testGraph
-                       , nextApId = 4
-                       , nextLambdaId = 1
                        }
             )
           ]
@@ -118,6 +116,8 @@ testGraph =
           , to = (["lambda0", "ap2_add_hi"], ApParamSlot "str")
           }
         ]
+    , nextApId = 4
+    , nextLambdaId = 1
     }
 
 code = Codegen.moduleToPython helloMap

@@ -1,35 +1,59 @@
 module Model where
 
-import Diagrams.Geom exposing (Point, Dims)
-
 import Dict as D
 import Set
 import List as L
 import Result as R
 import Maybe as M
 import String as S
+import Debug
+
+import Diagrams.Geom exposing (Point, Dims)
+import Diagrams.Wiring exposing (CollageLocation, PrimMouseEvent)
+import Diagrams.Core as DC
+import Diagrams.Interact as DI
 
 import Util exposing (..)
 
-{-
-type Action
-    = ElemPanelAction ElementsPanel.Action
-    | GraphEditorAction GraphEditor.Action
-    | AddLambda
-    | AddApNode Model.FuncId
-    | NoOp
-
--- TODO: tabs, multiple modules
+-- top-level state
 type alias State =
     { mod : Module
-    , editingFn : Maybe FuncName
-    , elemPanelState : ElemPanelState
+    , editingFn : FuncName
+    , graphEditorState : GraphEditorState
+    , elemPanelFilter : String
     }
 
-type alias ElemPanelState =
-    { filter : Maybe String }
+-- Actions
 
--}
+type Action
+    = FilterElemPanel String
+    | CanvasMouseEvt (CollageLocation, PrimMouseEvent)
+    -- graph ops
+    | MoveNode NodePath Point
+    | AddLambda
+    | AddApNode FuncId
+    | RemoveNode NodePath
+    | AddEdge Edge
+    | RemoveEdge Edge
+    | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
+    --
+    | NoOp
+
+type GraphEditorAction
+    = InternalAction GraphEditorInternalAction
+    | ExternalAction Action
+
+type GraphEditorInternalAction
+    = DragNodeStart { nodePath : NodePath, offset : Point }
+    | DragEdgeStart { fromPort : OutPortId, endPos : Point }
+    | PanStart { offset : Point }
+    | DragEdgeTo Point
+    | PanTo Point
+    | DragEnd
+    -- dropping into lambdas
+    | OverLambda NodePath
+    | NotOverLambda NodePath
+
 -- MODULE
 
 type alias ModName = String
@@ -58,8 +82,6 @@ type alias BuiltinFuncAttrs =
 type alias UserFuncAttrs =
     { name : String
     , graph : Graph
-    , nextApId : Int
-    , nextLambdaId : Int
     }
 
 -- TODO: user func args are computed from graph
@@ -76,8 +98,6 @@ emptyUserFunc : FuncName -> Func
 emptyUserFunc name =
     UserFunc { name = name
              , graph = emptyGraph
-             , nextApId = 0
-             , nextLambdaId = 0
              }
 
 -- this mod is def getting crowded
@@ -125,7 +145,7 @@ funcReturnVals mod func =
             |> L.map outPortToString
 
 -- TODO: can't figure out how to use extensible records here
-funcName : Func -> ModName
+funcName : Func -> FuncName
 funcName func =
     case func of
       UserFunc attrs -> attrs.name
@@ -142,6 +162,42 @@ getFuncOrCrash : Module -> FuncName -> Func
 getFuncOrCrash mod funcName =
     getFunc mod funcName
       |> getMaybeOrCrash ("no such function " ++ funcName)
+
+-- ...
+
+getCurrentUserFunc : State -> UserFuncAttrs
+getCurrentUserFunc state =
+    case state.mod.userFuncs |> D.get state.editingFn of
+      Just (UserFunc attrs) -> attrs
+      Just (BuiltinFunc _) -> Debug.crash "builtin func supposed to be user func"
+      Nothing -> Debug.crash <| "no func found named " ++ state.editingFn
+
+getCurrentGraph : State -> Graph
+getCurrentGraph state =
+    getCurrentUserFunc state |> .graph
+
+updateCurrentGraph : State -> (Graph -> Result String Graph) -> State
+updateCurrentGraph state updateFun =
+    let mod = state.mod
+        newUFs = state.mod.userFuncs
+                  |> D.update state.editingFn (\uFunc ->
+                      M.map (\(UserFunc attrs) ->
+                          UserFunc { attrs | graph <- updateFun attrs.graph |> getOrCrash }) uFunc)
+    in { state | mod <- { mod | userFuncs <- newUFs } }
+
+getLambdaId : State -> (State, Int)
+getLambdaId state =
+    let lid = state |> getCurrentGraph |> .nextLambdaId
+    in ( updateCurrentGraph state (\graph -> Ok { graph | nextLambdaId <- lid + 1 })
+       , lid
+       )
+
+getApId : State -> (State, Int)
+getApId state =
+    let aid = state |> getCurrentGraph |> .nextApId
+    in ( updateCurrentGraph state (\graph -> Ok { graph | nextApId <- aid + 1 })
+       , aid
+       )
 
 -- GRAPH (TODO: maybe factor this out?)
 
@@ -181,9 +237,17 @@ emptyLambdaNode =
 type alias Edge = { from : OutPortId, to : InPortId }
 
 type alias NodeDict = D.Dict NodeId PosNode
-type alias Graph = { nodes : NodeDict, edges : List Edge }
+type alias Graph = { nodes : NodeDict
+                   , edges : List Edge
+                   , nextApId : Int
+                   , nextLambdaId : Int
+                   }
 
-emptyGraph = { nodes = D.empty, edges = [] }
+emptyGraph = { nodes = D.empty
+             , edges = []
+             , nextApId = 0
+             , nextLambdaId = 0
+             }
 
 -- OPERATIONS
 
@@ -340,3 +404,90 @@ freeOutPorts mod graph pathAbove =
               |> L.concatMap (\(nodeId, posNode) ->
                     outSlots mod posNode.node |> L.map (\slot -> (pathAbove ++ [nodeId], slot)))
     in allOutPorts |> L.filter (\ip -> not <| ip `L.member` takenOutPorts)
+
+
+-- graph editor stuff (can't figure out how to move this to its own module)
+
+type alias GraphEditorState =
+    { diagram : DC.Diagram Tag GraphEditorAction
+    , mouseState : DI.MouseState Tag GraphEditorAction
+    , collageLoc : CollageLocation
+    , dragState : Maybe DraggingState
+    , pan : Point
+    }
+
+type DraggingState
+    = DraggingNode { nodePath : NodePath, offset : Point, overLambdaNode : Maybe NodePath } -- offset at lowest level
+    | DraggingEdge { fromPort : OutPortId, endPos : Point, upstreamNodes : Set.Set NodePath }
+    | DragPanning { offset : Point }
+
+-- tags
+
+type Tag
+    = TopLevel
+    | NodeIdT NodeId
+    | TitleT
+    | InPortT InSlotId
+    | OutPortT OutSlotId
+    | XOut
+    | Canvas
+
+type PortState
+    = NormalPort
+    | InvalidPort
+    | TakenPort
+    | ValidPort
+
+type LambdaState
+    = ValidNodeOverLS
+    | InvalidNodeOverLS
+    | NormalLS
+
+-- TODO(perf): these are same for duration of drag. could save somewhere.
+inPortState : State -> InPortId -> PortState
+inPortState state (thisNodePath, slotId) =
+    if funcOutPortUsed (state |> getCurrentGraph) thisNodePath
+    then InvalidPort
+    else case state.graphEditorState.dragState of
+           Just (DraggingEdge attrs) ->
+              let (fromNodePath, _) = attrs.fromPort
+              in if -- dragging from this node
+                    | thisNodePath `startsWith` fromNodePath -> InvalidPort
+                    -- this node already taken
+                    | inPortTaken (state |> getCurrentGraph) (thisNodePath, slotId) -> TakenPort
+                    -- no cycles
+                    | thisNodePath `Set.member` attrs.upstreamNodes -> InvalidPort
+                    | L.any (\unPath -> thisNodePath `startsWith` unPath) (Set.toList <| attrs.upstreamNodes) -> InvalidPort
+                    -- can't go from in lambda to out
+                    | goingUpTree fromNodePath thisNodePath -> InvalidPort
+                    -- TODO: wrong type!
+                    | otherwise -> ValidPort
+           _ -> NormalPort
+
+-- TODO: highlight as valid when you mouse over an in port of same type
+outPortState : State -> OutPortId -> PortState
+outPortState state (nodePath, slotId) =
+    if | funcOutPortUsed (state |> getCurrentGraph) nodePath ->
+            case slotId of
+              FuncValueSlot -> NormalPort
+              _ -> InvalidPort
+       | anyNormalPortsUsed (state |> getCurrentGraph) nodePath ->
+            case slotId of
+              FuncValueSlot -> InvalidPort
+              _ -> NormalPort
+       | otherwise -> NormalPort
+
+-- TODO: use these in other queries
+lambdaState : State -> NodePath -> LambdaState
+lambdaState state nodePath =
+    case state.graphEditorState.dragState of
+      Just (DraggingNode attrs) ->
+          case attrs.overLambdaNode of
+            Just overLN -> if overLN == nodePath
+                           then if canBeDroppedInLambda (state |> getCurrentGraph) overLN attrs.nodePath
+                                then ValidNodeOverLS
+                                else InvalidNodeOverLS
+                           else NormalLS
+            Nothing -> NormalLS
+      _ -> NormalLS
+
