@@ -38,7 +38,7 @@ upGraphAndRender state upFun =
 
 update : Action -> State -> State
 update action state =
-    case Debug.log "act" action of
+    case Debug.log "action" action of
       FilterElemPanel filter ->
           { state | elemPanelFilter <- filter }
       CanvasMouseEvt (collageLoc, primMouseEvt) ->
@@ -47,6 +47,9 @@ update action state =
                       state.graphEditorState.diagram
                       state.graphEditorState.mouseState
                       primMouseEvt
+              geState = state.graphEditorState
+              newMSState = { state | graphEditorState <- { geState | mouseState <- newMS
+                                                                   , collageLoc <- collageLoc } }
               process : GraphEditorAction -> State -> State
               process act state =
                     case Debug.log "ge act" act of
@@ -54,12 +57,9 @@ update action state =
                           GE.update intAct state
                       ExternalAction extAct ->
                           update extAct state
-              geState = state.graphEditorState
-              newMSState = { state | graphEditorState <- { geState | mouseState <- newMS
-                                                                   , collageLoc <- collageLoc } }
-              newState = L.foldr process newMSState actions
+              newState = L.foldl process newMSState actions
               newGEState = newState.graphEditorState
-          in { state | graphEditorState <- { newGEState | diagram <- GE.render newState } }
+          in { newState | graphEditorState <- { newGEState | diagram <- GE.render newState } }
       -- add and remove
       MoveNode nodePath point ->
           upGraphAndRender state <| moveNode nodePath point
