@@ -5,14 +5,14 @@ My senior thesis in CS at the University of Chicago, advised by Borja Sotomayor 
 ## Requires
 
 1. Elm 0.15 (elm-lang.org)
-2. Node.js (TODO: make actual node package)
+2. Node.js 0.12
+3. Python 2.7
 
 ## How to run
 
-(These instructions will change when there is a server process running)
-
 In root directory:
 
-1. `$ elm make src/Main.elm`
-2. `$ elm reactor`
-3. Open browser to [http://localhost:8000/index.html](http://localhost:8000/index.html)
+1. `$ make install` (installs Elm and Node packages)
+2. `$ make` (compiles Elm code)
+3. `$ node server.js`
+3. Open browser to [http://localhost:3000/](http://localhost:3000/)
