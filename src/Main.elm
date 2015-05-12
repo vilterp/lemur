@@ -41,6 +41,13 @@ update action state =
     case Debug.log "action" action of
       FilterElemPanel filter ->
           { state | elemPanelFilter <- filter }
+      -- module
+      NewUDF ->
+          let mod = state.mod
+              newUdf = emptyUserFunc "blargh"
+          in { state | mod <- { mod | userFuncs <- state.mod.userFuncs
+                                                    |> D.insert "blargh" newUdf } }
+      -- graph editor
       CanvasMouseEvt (collageLoc, primMouseEvt) ->
           let (newMS, actions) =
                   DI.processMouseEvent 
@@ -60,7 +67,7 @@ update action state =
               newState = L.foldl process newMSState actions
               newGEState = newState.graphEditorState
           in { newState | graphEditorState <- { newGEState | diagram <- GE.render newState } }
-      -- add and remove
+      -- graph
       MoveNode nodePath point ->
           upGraphAndRender state <| moveNode nodePath point
       AddLambda ->

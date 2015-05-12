@@ -18,7 +18,8 @@ type alias Button =
 
 getABState : Model.State -> State
 getABState smState =
-    [ [{ name = "Add Lambda", action = Model.AddLambda }]
+    [ [{ name = "New Function", action = Model.NewUDF }]
+    , [{ name = "Add Lambda", action = Model.AddLambda }]
     ]
 
 view : S.Address Model.Action -> Model.State -> Html

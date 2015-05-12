@@ -27,6 +27,9 @@ type alias State =
 
 type Action
     = FilterElemPanel String
+    -- module ops
+    | NewUDF
+    -- graph editor
     | CanvasMouseEvt (CollageLocation, PrimMouseEvent)
     -- graph ops
     | MoveNode NodePath Point
