@@ -389,16 +389,30 @@ outSlots mod node =
       IfNode -> [IfResultSlot]
       LambdaNode _ -> [] -- never really want to return this
 
+usedAsValue : NodePath -> Graph -> Bool
+usedAsValue nodePath graph =
+    case edgesFrom graph nodePath of
+      [edge] ->
+        case edge.from of
+          (_, FuncValueSlot) -> True
+          _ -> False
+      _ -> False
+
 -- for codegen, there can be no free in or out ports.
 -- free in and out ports are an invalid state.
 -- TODO: annoyingly repetitive, again
 freeInPorts : Module -> Graph -> NodePath -> List InPortId
 freeInPorts mod graph pathAbove =
     let takenInPorts = L.map .to graph.edges
+        getInPorts (nodeId, posNode) =
+          let nodePath = pathAbove ++ [nodeId]
+          in if usedAsValue nodePath graph
+             then []
+             else inSlots mod posNode.node
+                    |> L.map (\slot -> (nodePath, slot))
         allInPorts =
             D.toList graph.nodes
-              |> L.concatMap (\(nodeId, posNode) -> inSlots mod posNode.node
-                                |> L.map (\slot -> (pathAbove ++ [nodeId], slot)))
+              |> L.concatMap getInPorts
     in allInPorts |> L.filter (\ip -> not <| ip `L.member` takenInPorts)
 
 {-| KNOWN ISSUE: this can end up calling itself with same arguments,
@@ -407,10 +421,15 @@ or make functions explicitly declare param & return vals -}
 freeOutPorts : Module -> Graph -> NodePath -> List OutPortId
 freeOutPorts mod graph pathAbove =
     let takenOutPorts = L.map .from graph.edges -- can be dups, but that's ok
+        getOutPorts (nodeId, posNode) =
+          let nodePath = pathAbove ++ [nodeId]
+          in if usedAsValue nodePath graph
+             then []
+             else outSlots mod posNode.node
+                    |> L.map (\slot -> (nodePath, slot))
         allOutPorts =
             D.toList graph.nodes
-              |> L.concatMap (\(nodeId, posNode) ->
-                    outSlots mod posNode.node |> L.map (\slot -> (pathAbove ++ [nodeId], slot)))
+              |> L.concatMap getOutPorts
     in allOutPorts |> L.filter (\ip -> not <| ip `L.member` takenOutPorts)
 
 

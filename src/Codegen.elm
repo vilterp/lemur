@@ -45,40 +45,53 @@ nodeToStmt mod graph (nodePath, node) =
       ApNode funcId ->
           -- TODO: these don't necessarily line up, & some of them need
           -- to be from params to this func
-          let func = getFuncOrCrash mod funcId
-              toEdges = edgesTo graph nodePath
-              getSrcVar : InPortId -> String
-              getSrcVar inPortId =
-                  case getSrcPort graph inPortId of
-                    Just outPort -> outPortToString outPort
-                    Nothing -> inPortToString inPortId
-              -- `{"n": 2}`
-              argsDict = funcParams mod func
-                          |> L.map (\name -> (name, getSrcVar (nodePath, ApParamSlot name) |> AST.Variable))
-                          |> D.fromList
-                          |> AST.DictLiteral
-              -- `log_call(fun, apid, args_dict)`
-              call = AST.FuncCall { func = AST.Variable "log_call"
-                                  , args =  [ func |> funcName |> AST.Variable
-                                            , nodeId |> AST.StringLit
-                                            , argsDict
-                                            ]
-                                  }
-              resultVarName = nodePathToString nodePath
-              callAssn = AST.VarAssn { varName = resultVarName
-                                     , expr = call
-                                     }
-              -- now make vars for return values
-              resultVars =
-                func
-                  |> funcReturnVals mod
-                  |> L.map (\name ->
-                      AST.VarAssn { varName = outPortToString (nodePath, ApResultSlot name)
-                                  , expr = AST.DictAccess
-                                              (AST.Variable resultVarName)
-                                              name
-                                  })
-          in callAssn :: resultVars
+          if usedAsValue nodePath graph
+          then []
+          else
+            let func = getFuncOrCrash mod funcId
+                toEdges = edgesTo graph nodePath
+                getSrcVar : InPortId -> String
+                getSrcVar inPortId =
+                    case getSrcPort graph inPortId of
+                      Just outPort ->
+                          case outPort of
+                            (srcNodePath, FuncValueSlot) ->
+                                case getNode srcNodePath graph |> getOrCrash |> .node of
+                                  ApNode srcFuncId -> srcFuncId
+                                  LambdaNode _ -> outPortToString outPort
+                                  _ -> Debug.crash "expecting ap node"
+                            _ -> outPortToString outPort
+                      Nothing -> inPortToString inPortId
+                -- `{"n": 2}`
+                argsDict = funcParams mod func
+                            |> L.map (\name -> ( name
+                                               , getSrcVar (nodePath, ApParamSlot name)
+                                                  |> AST.Variable
+                                               ))
+                            |> D.fromList
+                            |> AST.DictLiteral
+                -- `log_call(fun, apid, args_dict)`
+                call = AST.FuncCall { func = AST.Variable "log_call"
+                                    , args =  [ func |> funcName |> AST.Variable
+                                              , nodeId |> AST.StringLit
+                                              , argsDict
+                                              ]
+                                    }
+                resultVarName = nodePathToString nodePath
+                callAssn = AST.VarAssn { varName = resultVarName
+                                       , expr = call
+                                       }
+                -- now make vars for return values
+                resultVars =
+                  func
+                    |> funcReturnVals mod
+                    |> L.map (\name ->
+                        AST.VarAssn { varName = outPortToString (nodePath, ApResultSlot name)
+                                    , expr = AST.DictAccess
+                                                (AST.Variable resultVarName)
+                                                name
+                                    })
+            in callAssn :: resultVars
       IfNode ->
           {- TODO: 4 real
           since we're thinking of this as an expression, should assign 
