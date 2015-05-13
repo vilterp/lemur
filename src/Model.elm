@@ -522,14 +522,14 @@ lambdaState state nodePath =
 
 type alias RunId = Int
 type alias Run =
-    { funcName : FuncName
+    { userFunc : UserFuncAttrs
     , state : Runtime.CallTree.RunState
     }
 
-addNewRun : FuncName -> State -> State
-addNewRun name state =
+addNewRun : State -> State
+addNewRun state =
     let rid = state.nextRunId
-        newRun = { funcName = name
+        newRun = { userFunc = getCurrentUserFunc state
                  , state = Runtime.CallTree.InProgress Runtime.CallTree.RunningRoot }
     in { state | nextRunId <- rid + 1
                , runs <- D.insert rid newRun state.runs }

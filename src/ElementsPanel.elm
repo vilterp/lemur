@@ -51,4 +51,4 @@ runView (runId, run) =
     li
       -- TODO: this isn't a module element, but want same style. refactor CSS...
       [ class "module-element" ]
-      [ text <| "#" ++ toString runId ++ ": " ++ run.funcName ++ (if Model.runIsDone run then " (done)" else "") ]
+      [ text <| "#" ++ toString runId ++ ": " ++ run.userFunc.name ++ (if Model.runIsDone run then " (done)" else "") ]

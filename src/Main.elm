@@ -97,7 +97,7 @@ update action state =
           else state
       -- running
       StartExecution ->
-          state |> addNewRun state.editingFn
+          state |> addNewRun
       ExecutionUpdate runId update ->
           state |> processExecutionUpdate runId update
       -- 
