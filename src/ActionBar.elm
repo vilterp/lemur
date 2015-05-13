@@ -22,7 +22,7 @@ type Action
     | NormalAction Model.Action
 
 -- TODO: move to model or some other module?
-type alias CodeReq = Maybe (Model.Module, String)
+type alias CodeReq = Maybe (Model.RunId, Model.Module, String)
 
 getABState : Model.State -> State
 getABState smState =
@@ -48,7 +48,7 @@ viewButton actionAddr codeAddr state button =
     let actionAttr =
           case button.action of
             CodeAction ->
-                onClick codeAddr <| Just (state.mod, state.editingFn)
+                onClick codeAddr <| Just (state.nextRunId, state.mod, state.editingFn)
             NormalAction action ->
                 onClick actionAddr action
     in div

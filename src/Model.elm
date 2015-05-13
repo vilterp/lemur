@@ -24,6 +24,8 @@ type alias State =
     , editingFn : FuncName
     , graphEditorState : GraphEditorState
     , elemPanelFilter : String
+    , nextRunId : RunId
+    , runs : D.Dict RunId Run
     }
 
 -- Actions
@@ -40,7 +42,8 @@ type Action
     | RemoveEdge Edge
     | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
     -- running
-    | ExecutionResult Runtime.CallTree.DoneCallTree
+    | StartExecution
+    | ExecutionUpdate RunId Runtime.CallTree.ExecutionUpdate
     --
     | NoOp
 
@@ -496,3 +499,28 @@ lambdaState state nodePath =
             Nothing -> NormalLS
       _ -> NormalLS
 
+-- RUNS
+
+type alias RunId = Int
+type alias Run =
+    { funcName : FuncName
+    , state : Runtime.CallTree.RunState
+    }
+
+addNewRun : FuncName -> State -> State
+addNewRun name state =
+    let rid = state.nextRunId
+        newRun = { funcName = name
+                 , state = Runtime.CallTree.InProgress Runtime.CallTree.RunningRoot }
+    in { state | nextRunId <- rid + 1
+               , runs <- D.insert rid newRun state.runs }
+
+processExecutionUpdate : RunId -> Runtime.CallTree.ExecutionUpdate -> State -> State
+processExecutionUpdate runId update state =
+    let updateFun maybeRun =
+          case maybeRun of
+            Just run ->
+                let newRunState = run.state |> Runtime.CallTree.processUpdate update
+                in Just <| { run | state <- Debug.log "NRS" newRunState }
+            Nothing -> Debug.crash "received update for nonexistent run"
+    in { state | runs <- D.update runId updateFun state.runs }

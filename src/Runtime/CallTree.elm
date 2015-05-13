@@ -47,11 +47,11 @@ pushCall apId args runningTree =
       , parent = runningTree
       }
 
-type PopResult
-  = StillRunning RunningCallTree
+type RunState
+  = InProgress RunningCallTree
   | DoneRunning DoneCallTree
 
-popCall : Record -> RunningCallTree -> PopResult
+popCall : Record -> RunningCallTree -> RunState
 popCall results (RunningCallTree runningTree) =
     let doneTree =
           DoneCallTree
@@ -62,25 +62,27 @@ popCall results (RunningCallTree runningTree) =
             }
     in case runningTree.parent of
         RunningCallTree parent ->
-            StillRunning <|
+            InProgress <|
               RunningCallTree { parent | doneChildren <- parent.doneChildren ++ [doneTree] }
         RunningRoot ->
             DoneRunning doneTree
 
+processUpdate : ExecutionUpdate -> RunState -> RunState
+processUpdate update state =
+    case state of
+      DoneRunning _ -> Debug.crash "too many updates; already done."
+      InProgress runningTree ->
+          case update of
+            StartCall { apId, args } ->
+                runningTree |> pushCall apId args |> InProgress
+            EndCall { results } ->
+                runningTree |> popCall results
+
 -- TODO: use Result instead of debug.crash... (?)
 buildTree : List ExecutionUpdate -> DoneCallTree
 buildTree updates =
-    let pushOrPop update state =
-          case state of
-            DoneRunning _ -> Debug.crash "too many updates; already done."
-            StillRunning runningTree ->
-                case update of
-                  StartCall { apId, args } ->
-                      runningTree |> pushCall apId args |> StillRunning
-                  EndCall { results } ->
-                      runningTree |> popCall results
-        result = L.foldl pushOrPop (StillRunning RunningRoot) updates
+    let result = L.foldl processUpdate (InProgress RunningRoot) updates
     in case result of
         DoneRunning doneTree -> doneTree
-        StillRunning rt ->
+        InProgress rt ->
             Debug.crash <| "need more done call messages. state=" ++ (toString rt) ++ " remaining=" ++ (toString updates)

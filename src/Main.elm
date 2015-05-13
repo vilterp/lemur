@@ -96,9 +96,10 @@ update action state =
           then upGraphAndRender state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
           else state
       -- running
-      ExecutionResult doneCallTree ->
-          let dct = Debug.log "dct" doneCallTree
-          in state
+      StartExecution ->
+          state |> addNewRun state.editingFn
+      ExecutionUpdate runId update ->
+          state |> processExecutionUpdate runId update
       -- 
       NoOp -> state
 
@@ -181,6 +182,8 @@ initState =
     , editingFn = "main"
     , graphEditorState = GE.initState
     , elemPanelFilter = ""
+    , nextRunId = 0
+    , runs = D.empty
     }
 
 htmlUpdates = S.mailbox Model.NoOp
@@ -205,30 +208,30 @@ main : Signal Html
 main =
   S.map view state
 
-codeExecutionRequests : S.Mailbox (Maybe (Module, String))
+codeExecutionRequests : S.Mailbox (Maybe (RunId, Module, String))
 codeExecutionRequests = 
     S.mailbox Nothing
 
 port codeExecTasks : Signal (T.Task Http.Error ())
 port codeExecTasks =
     codeExecutionRequests.signal
-      |> S.map requestAndSend
+      |> S.map (\req -> S.send htmlUpdates.address StartExecution
+                              `T.andThen` (\_ -> requestAndSend req))
 
-requestAndSend : Maybe (Module, String) -> T.Task Http.Error ()
+requestAndSend : Maybe (RunId, Module, String) -> T.Task Http.Error ()
 requestAndSend codeReq =
     case codeReq of
       Nothing -> T.succeed ()
-      Just (mod, mainFunc) ->
-          let t1 : T.Task Http.Error (List Runtime.CallTree.ExecutionUpdate)
-              t1 = requestExecution mod mainFunc
-          in t1 `T.andThen` sendToUpdates
+      Just (runId, mod, mainFunc) ->
+          requestExecution mod mainFunc
+            `T.andThen` (sendToUpdates runId)
 
-sendToUpdates : List Runtime.CallTree.ExecutionUpdate -> T.Task Http.Error ()
-sendToUpdates updates =
+sendToUpdates : RunId -> List Runtime.CallTree.ExecutionUpdate -> T.Task Http.Error ()
+sendToUpdates runId updates =
     updates
-      |> Runtime.CallTree.buildTree
-      |> ExecutionResult
-      |> S.send htmlUpdates.address
+      |> L.map (\update -> ExecutionUpdate runId update |> S.send htmlUpdates.address)
+      |> (\tasks -> T.sequence tasks
+                      `T.andThen` (always <| T.succeed ()))
 
 requestExecution : Module -> String -> T.Task Http.Error (List Runtime.CallTree.ExecutionUpdate)
 requestExecution mod mainFunc =
