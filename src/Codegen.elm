@@ -145,9 +145,20 @@ funcToString mod func =
          userFuncToAst mod attrs
            |> AST.statementToPython
 
-moduleToPython : Module -> String
-moduleToPython mod =
-    D.union mod.userFuncs mod.builtinFuncs
-      |> D.toList
-      |> L.map (funcToString mod << snd)
-      |> S.join "\n\n"
+moduleToPython : FuncName -> Module -> String
+moduleToPython mainFunc mod =
+    let funcStrings =
+          D.union mod.userFuncs mod.builtinFuncs
+            |> D.toList
+            |> L.map (funcToString mod << snd)
+        importStmt = AST.ImportAll ["log_call"]
+        main_call = AST.FuncCall { func = AST.Variable "run_main"
+                                 , args = [ AST.Variable mainFunc
+                                          , AST.DictLiteral D.empty 
+                                          ] 
+                                 }
+                      |> AST.StandaloneExpr
+    in [importStmt |> AST.statementToPython]
+        ++ funcStrings
+        ++ [main_call |> AST.statementToPython]
+        |> S.join "\n\n"

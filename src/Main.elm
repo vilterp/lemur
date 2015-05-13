@@ -8,6 +8,7 @@ import Debug
 import Dict as D
 import List as L
 import Maybe
+import Task as T
 
 import Diagrams.Core as DC
 import Diagrams.Geom as DG
@@ -23,6 +24,11 @@ import GraphEditor as GE
 import CommonView exposing (..)
 
 import TestData
+
+import Codegen
+import Runtime.Decode
+import Runtime.CallTree
+import Http
 
 -- MODEL
 
@@ -89,6 +95,10 @@ update action state =
           if canBeDroppedInLambda (state |> getCurrentGraph) lambdaPath droppedNodePath
           then upGraphAndRender state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
           else state
+      -- running
+      ExecutionResult doneCallTree ->
+          let dct = Debug.log "dct" doneCallTree
+          in state
       -- 
       NoOp -> state
 
@@ -96,13 +106,13 @@ defaultPos = (0, 0)
 
 -- VIEW
 
-view : S.Address Action -> State -> Html
-view updates state =
+view : State -> Html
+view state =
     div
       [ id "app" ]
       [ topSection
-      , ActionBar.view updates state
-      , ElementsPanel.view updates state
+      , ActionBar.view htmlUpdates.address codeExecutionRequests.address state
+      , ElementsPanel.view htmlUpdates.address state
       , centerSection state
       , rightSection
       ]
@@ -177,12 +187,11 @@ htmlUpdates = S.mailbox Model.NoOp
 
 editorLocFunc : DW.CollageLocFunc
 editorLocFunc windowDims =
-    let d = Debug.log "dims" windowDims
-    in { offset = (252, 101)
-       , dims = { width = windowDims.width - 501
-                , height = windowDims.height - 101
-                }
-       }
+    { offset = (252, 101)
+    , dims = { width = windowDims.width - 501
+             , height = windowDims.height - 101
+             }
+    }
 
 collageEvents = DW.makeUpdateStream editorLocFunc |> S.map CanvasMouseEvt
 
@@ -194,4 +203,38 @@ state = S.foldp update initState updates
 
 main : Signal Html
 main =
-  S.map (view htmlUpdates.address) state
+  S.map view state
+
+codeExecutionRequests : S.Mailbox (Maybe (Module, String))
+codeExecutionRequests = 
+    S.mailbox Nothing
+
+port codeExecTasks : Signal (T.Task Http.Error ())
+port codeExecTasks =
+    codeExecutionRequests.signal
+      |> S.map requestAndSend
+
+requestAndSend : Maybe (Module, String) -> T.Task Http.Error ()
+requestAndSend codeReq =
+    case codeReq of
+      Nothing -> T.succeed ()
+      Just (mod, mainFunc) ->
+          let t1 : T.Task Http.Error (List Runtime.CallTree.ExecutionUpdate)
+              t1 = requestExecution mod mainFunc
+          in t1 `T.andThen` sendToUpdates
+
+sendToUpdates : List Runtime.CallTree.ExecutionUpdate -> T.Task Http.Error ()
+sendToUpdates updates =
+    updates
+      |> Runtime.CallTree.buildTree
+      |> ExecutionResult
+      |> S.send htmlUpdates.address
+
+requestExecution : Module -> String -> T.Task Http.Error (List Runtime.CallTree.ExecutionUpdate)
+requestExecution mod mainFunc =
+    Http.url "/run_python" [("code", Codegen.moduleToPython mainFunc mod)]
+      |> Http.get Runtime.Decode.updateList
+
+bodyFromCode : String -> Http.Body
+bodyFromCode code =
+    Http.string code

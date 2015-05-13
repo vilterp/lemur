@@ -4,7 +4,6 @@ var bodyParser = require('body-parser');
 var events = require('events');
 var child_process = require('child_process');
 var tmp = require('tmp');
-var fs = require('fs');
 var fs = require('fs-extra');
 // var multer = require('multer');
 
@@ -28,9 +27,7 @@ app.get('/', function(req, res) {
 	res.sendFile('public/index.html');
 });
 
-app.post('/run_python', function(req, res) {
-  // TODO: get code field
-  console.log(req.body);
+app.get('/run_python', function(req, res) {
 
   tmp.dir(function(err, path, cleanupCallback) {
     if (err) throw err;
@@ -42,7 +39,11 @@ app.post('/run_python', function(req, res) {
     fs.copy('src/Runtime/log_call.py', log_call_path, function (err) {
       if (err) return console.error(err)
       
-      fs.writeFile(code_path, req.body.code, function(err) {
+      var code = req.param('code');
+
+      console.log('CODE:', code);
+
+      fs.writeFile(code_path, code, function(err) {
         if(err) throw err;
         
         var stdout_messages = [];
@@ -50,23 +51,21 @@ app.post('/run_python', function(req, res) {
 
         var python = child_process.spawn('python', [code_path]);
         python.stdout.setEncoding('utf8');
-        python.stdout.on('data', function(data) {
-          var line = data.slice(0, -1);
+        python.stdout.on('data', function(line) {
           console.log('python out:', line);
           var split = line.split(';');
           for(var i=0; i < split.length; i++) {
-            var msg = split[i];
+            var msg = split[i].trim();
             if(msg.length > 0) {
-              stdout_messages.push(msg);
-              var parsed = JSON.parse(msg); // just to validate
+              stdout_messages.push(JSON.parse(msg));
               console.log(msg);
-              res.write(msg);
+              // res.write(msg);
             }
           }
         });
         python.stderr.setEncoding('utf8');
         python.stderr.on('data', function(data) {
-          var line = data.slice(0, -1);
+          var line = data.trim();
           console.log('python err:', line);
           stderr_messages.push(line);
         });
@@ -74,15 +73,13 @@ app.post('/run_python', function(req, res) {
         python.on('close', function(code, signal) {
           console.log('exit code: ', code);
 
-          res.end();
+          // res.end();
 
-          fs.unlinkSync(log_call_path);
-          fs.unlinkSync(code_path);
-          fs.unlinkSync(path + '/log_call.pyc'); // TODO: can I just glob somehow? or rm -rf?
+          res.send(stdout_messages);
 
           console.log('contents:', fs.readdirSync(path));
 
-          cleanupCallback();
+          fs.removeSync(path)
 
         });
 

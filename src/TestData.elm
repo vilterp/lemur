@@ -120,4 +120,4 @@ testGraph =
     , nextLambdaId = 1
     }
 
-code = Codegen.moduleToPython helloMap
+code = Codegen.moduleToPython "main" helloMap

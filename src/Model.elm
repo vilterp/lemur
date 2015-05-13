@@ -13,6 +13,9 @@ import Diagrams.Wiring exposing (CollageLocation, PrimMouseEvent)
 import Diagrams.Core as DC
 import Diagrams.Interact as DI
 
+-- hope this doesn't become circular
+import Runtime.CallTree
+
 import Util exposing (..)
 
 -- top-level state
@@ -36,6 +39,8 @@ type Action
     | AddEdge Edge
     | RemoveEdge Edge
     | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
+    -- running
+    | ExecutionResult Runtime.CallTree.DoneCallTree
     --
     | NoOp
 

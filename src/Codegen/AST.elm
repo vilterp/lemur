@@ -22,6 +22,8 @@ type Statement
     | VarAssn { varName : String, expr : Expr }
     | IfStmt { cond : Expr, ifBlock : List Statement, elseBlock : List Statement }
     | Return Expr
+    | ImportAll (List String)
+    | StandaloneExpr Expr
 
 parens : String -> String
 parens str = "(" ++ str ++ ")"
@@ -73,9 +75,13 @@ statementToPython stmt =
                     (blockToTree elseBlock)
                 ]
             VarAssn {varName, expr} ->
-                [leaf <| varName ++ " = " ++ (exprToPython expr)]
+                [ leaf <| varName ++ " = " ++ (exprToPython expr) ]
             Return expr ->
-                [leaf <| "return " ++ (exprToPython expr)]
+                [ leaf <| "return " ++ (exprToPython expr) ]
+            ImportAll fromModule ->
+                [ leaf <| "from " ++ S.join "." fromModule ++ " import *" ]
+            StandaloneExpr expr ->
+                [ leaf <| exprToPython expr ]
         blockToTree block =
           case block of
             [] -> [ leaf "pass" ]

@@ -14,7 +14,7 @@ import Model
 -- VIEW
 
 view : S.Address Model.Action -> Model.State -> Html
-view chan state =
+view addr state =
     div [ id "left" ]
       [ scrollPanel
           [ div [ class "panel-header-label" ] [ text "Elements" ]
@@ -27,17 +27,17 @@ view chan state =
                 (
                   (state.mod.userFuncs |> D.toList)
                     ++ (state.mod.builtinFuncs |> D.toList)
-                    |> L.map (modElementView chan)
+                    |> L.map (modElementView addr)
                 )
               ]
           ]
       ]
 
 modElementView : S.Address Model.Action -> (Model.FuncName, Model.Func) -> Html
-modElementView chan (funcId, func) =
+modElementView addr (funcId, func) =
     li
       [ class "module-element"
-      , onClick chan <| Model.AddApNode funcId 
+      , onClick addr <| Model.AddApNode funcId 
       ]
       [ div [ class "element-icon" ] [ elementIcon func ]
       , div [ class "element-label" ] [ text <| Model.funcName func ]

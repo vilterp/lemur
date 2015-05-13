@@ -9,38 +9,53 @@ import List as L
 
 import Model
 
+import Debug
+
 type alias State = List ButtonGroup
 type alias ButtonGroup = List Button
 type alias Button =
     { name : String
-    , action : Model.Action
+    , action : Action
     }
+type Action
+    = CodeAction
+    | NormalAction Model.Action
+
+-- TODO: move to model or some other module?
+type alias CodeReq = Maybe (Model.Module, String)
 
 getABState : Model.State -> State
 getABState smState =
-    [ [{ name = "Add Lambda", action = Model.AddLambda }]
+    [ [{ name = "Add Lambda", action = NormalAction Model.AddLambda }]
+    , [{ name = "Run", action = CodeAction }]
     ]
 
-view : S.Address Model.Action -> Model.State -> Html
-view chan state =
+view : S.Address Model.Action -> S.Address CodeReq -> Model.State -> Html
+view actionAddr codeAddr state =
     getABState state
-      |> L.map (viewButtonGroup chan)
+      |> L.map (viewButtonGroup actionAddr codeAddr state)
       |> L.intersperse buttonGroupSep
       |> div [ id "action-bar" ]
 
-viewButtonGroup : S.Address Model.Action -> ButtonGroup -> Html
-viewButtonGroup chan bg =
-    L.map (viewButton chan) bg
+viewButtonGroup : S.Address Model.Action -> S.Address CodeReq -> Model.State -> ButtonGroup -> Html
+viewButtonGroup actionAddr codeAddr state bg =
+    L.map (viewButton actionAddr codeAddr state) bg
       |> div [ class "action-bar-button-group" ]
 
 -- Later: KB shortcut (for display), icon, callback (?)
-viewButton : S.Address Model.Action -> Button -> Html
-viewButton chan button =
-    div
-      [ class "actionbar-button"
-      , onClick chan button.action
-      ]
-      [ text button.name ]
+viewButton : S.Address Model.Action -> S.Address CodeReq -> Model.State -> Button -> Html
+viewButton actionAddr codeAddr state button =
+    let actionAttr =
+          case button.action of
+            CodeAction ->
+                onClick codeAddr <| Just (state.mod, state.editingFn)
+            NormalAction action ->
+                onClick actionAddr action
+    in div
+        [ class "actionbar-button"
+        , actionAttr
+        ]
+        [ text button.name ]
 
 buttonGroupSep : Html
 buttonGroupSep = div [ class "actionbar-vertsep" ] []
