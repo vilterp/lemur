@@ -20,16 +20,18 @@ view addr state =
           [ div [ class "panel-header-label" ] [ text "Elements" ]
           --, input [ type' "text", id "search-bar" ] [] -- TODO search bar
           ]
-          [ div
-              [ class "panel-contents-section" ]
-              [ div
-                [ class "panel-contents-list" ]
-                (
-                  (state.mod.userFuncs |> D.toList)
-                    ++ (state.mod.builtinFuncs |> D.toList)
-                    |> L.map (modElementView addr)
-                )
-              ]
+          [ panelSection "Members" (
+                (state.mod.userFuncs |> D.toList)
+                      ++ (state.mod.builtinFuncs |> D.toList)
+                      |> L.map (modElementView addr)
+                      |> ul [ class "module-elements" ]
+              )
+          , panelSection "Runs" (
+                state.runs
+                  |> D.toList
+                  |> L.map runView
+                  |> ul [ class "module-elements" ]
+              )
           ]
       ]
 
@@ -42,3 +44,11 @@ modElementView addr (funcId, func) =
       [ div [ class "element-icon" ] [ elementIcon func ]
       , div [ class "element-label" ] [ text <| Model.funcName func ]
       ]
+
+-- TODO: click-to-open
+runView : (Model.RunId, Model.Run) -> Html
+runView (runId, run) =
+    li
+      -- TODO: this isn't a module element, but want same style. refactor CSS...
+      [ class "module-element" ]
+      [ text <| "#" ++ toString runId ++ ": " ++ run.funcName ++ (if Model.runIsDone run then " (done)" else "") ]

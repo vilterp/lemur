@@ -524,3 +524,9 @@ processExecutionUpdate runId update state =
                 in Just <| { run | state <- Debug.log "NRS" newRunState }
             Nothing -> Debug.crash "received update for nonexistent run"
     in { state | runs <- D.update runId updateFun state.runs }
+
+runIsDone : Run -> Bool
+runIsDone run =
+    case run.state of
+      Runtime.CallTree.InProgress _ -> False
+      Runtime.CallTree.DoneRunning _ -> True

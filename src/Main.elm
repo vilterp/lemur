@@ -182,7 +182,7 @@ initState =
     , editingFn = "main"
     , graphEditorState = GE.initState
     , elemPanelFilter = ""
-    , nextRunId = 0
+    , nextRunId = 1
     , runs = D.empty
     }
 
@@ -215,16 +215,17 @@ codeExecutionRequests =
 port codeExecTasks : Signal (T.Task Http.Error ())
 port codeExecTasks =
     codeExecutionRequests.signal
-      |> S.map (\req -> S.send htmlUpdates.address StartExecution
-                              `T.andThen` (\_ -> requestAndSend req))
+      |> S.map requestAndSend
 
 requestAndSend : Maybe (RunId, Module, String) -> T.Task Http.Error ()
 requestAndSend codeReq =
     case codeReq of
       Nothing -> T.succeed ()
       Just (runId, mod, mainFunc) ->
-          requestExecution mod mainFunc
-            `T.andThen` (sendToUpdates runId)
+          S.send htmlUpdates.address StartExecution
+            `T.andThen`
+              (\_ -> requestExecution mod mainFunc
+                `T.andThen` (sendToUpdates runId))
 
 sendToUpdates : RunId -> List Runtime.CallTree.ExecutionUpdate -> T.Task Http.Error ()
 sendToUpdates runId updates =

@@ -48,3 +48,18 @@ asHtml dia =
     [DC.render dia]
       |> C.collage (round <| DE.width dia) (round <| DE.height dia)
       |> Html.fromElement
+
+panelSection : String -> Html -> Html
+panelSection name contents =
+    div
+      [ class "panel-contents-section" ]
+      [ div
+          [ class "panel-contents-heading" ]
+          [ div [ class "heading-label" ] [ text name ]
+          --, div [ class "heading-button" ] [ text "+" ]
+          ]
+      , div
+          [ class "panel-contents-list" ]
+          [ contents
+          ]
+      ]
