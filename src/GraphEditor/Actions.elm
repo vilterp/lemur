@@ -53,7 +53,8 @@ canvasActions nodePath dragState =
                                             (\(MouseEvent evt) -> [ExternalAction <|
                                                                       DropNodeInLambda { lambdaPath = nodePath
                                                                                        , droppedNodePath = attrs.nodePath
-                                                                                       , posInLambda = evt.offset }]) }
+                                                                                       , posInLambda = evt.offset `pointSubtract` attrs.offset 
+                                                                                       }]) }
                   | otherwise -> emptyActionSet
             DraggingEdge attrs ->
                if nodePath == []
