@@ -10,6 +10,8 @@ import Diagrams.Core as DC
 import Diagrams.FillStroke as DFS
 import Diagrams.Align as DA
 import Diagrams.Envelope as DE
+import Diagrams.Geom as DG
+import Diagrams.Pad as DP
 
 import Model
 
@@ -36,7 +38,7 @@ scrollPanel header_elems child_elems =
 elementIcon : Model.Func -> Html
 elementIcon func =
     let icon color letter =
-          (DC.text letter defaultStyle)
+          (DC.text defaultStyle letter)
             `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid color)
         curIcon = case func of
                     Model.UserFunc _ -> icon Color.lightBlue "U"
@@ -63,3 +65,31 @@ panelSection name contents =
           [ contents
           ]
       ]
+
+-- tooltip
+-- maybe this should go in a diagrams-contrib library or something
+
+type alias TooltipSettings =
+    { direction : DG.Direction
+    , background : DFS.FillStroke
+    , tipSpacing : Float
+    , diaSpacing : Float
+    }
+
+defaultTooltipSettings =
+    { direction = DG.Down
+    , background = DFS.justFill <| DFS.Solid Color.black
+    , tipSpacing = 5
+    , diaSpacing = 3
+    }
+
+tooltip : TooltipSettings -> DC.Diagram t a -> DC.Diagram t a
+tooltip settings dia =
+    let mainBox = DP.background settings.background (dia |> DP.pad settings.diaSpacing)
+        triangle = DC.eqTriangle 7 settings.background
+                      |> DC.rotate (DG.directionAngle settings.direction - pi/2)
+    in case settings.direction of
+      DG.Up    -> triangle `DA.above`  mainBox  |> DA.alignTop    |> DC.moveY -settings.tipSpacing
+      DG.Down  -> mainBox  `DA.above`  triangle |> DA.alignBottom |> DC.moveY settings.tipSpacing
+      DG.Left  -> triangle `DA.beside` mainBox  |> DA.alignLeft   |> DC.moveX settings.tipSpacing
+      DG.Right -> mainBox  `DA.beside` triangle |> DA.alignRight  |> DC.moveX -settings.tipSpacing

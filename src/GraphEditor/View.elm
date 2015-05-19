@@ -57,7 +57,7 @@ inSlot state (nodePath, slotId) =
     in flexRight <| hcat [ tagWithActions (InPortT slotId) (inPortActions state (nodePath, slotId))
                               <| portCirc stateColor
                          , hspace 5
-                         , text (inSlotLabel slotId) slotLabelStyle
+                         , inSlotLabel slotId |> text slotLabelStyle
                          ]
 
 outSlotLabel : OutSlotId -> String
@@ -70,7 +70,7 @@ outSlotLabel sid =
 outSlot : State -> OutPortId -> LayoutRow Tag GraphEditorAction
 outSlot state (nodePath, slotId) =
     let stateColor = portStateColorCode <| outPortState state (nodePath, slotId)
-    in flexLeft <| hcat [ text (outSlotLabel slotId) slotLabelStyle
+    in flexLeft <| hcat [ outSlotLabel slotId |> text slotLabelStyle
                         , hspace 5
                         , tagWithActions (OutPortT slotId) (outPortActions state (nodePath, slotId))
                             <| portCirc stateColor
@@ -78,7 +78,7 @@ outSlot state (nodePath, slotId) =
 
 nodeTitle : String -> Color.Color -> NodePath -> GEDiagram
 nodeTitle name color nodePath =
-    let title = text name titleStyle
+    let title = name |> text titleStyle
         xOut = tagWithActions XOut (nodeXOutActions nodePath) <| nodeXGlyph color
     in hcat <| [ xOut
                , hspace 5
