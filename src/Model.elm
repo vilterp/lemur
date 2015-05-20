@@ -21,26 +21,43 @@ import Util exposing (..)
 -- top-level state
 type alias State =
     { mod : Module
-    , editingFn : FuncName
-    , graphEditorState : GraphEditorState
     , elemPanelFilter : String
+    , collageLoc : CollageLocation
+    , viewState : ViewState
     , nextRunId : RunId
     , runs : D.Dict RunId Run
     }
 
+type ViewState
+    = ViewingGraph
+        { name : FuncName
+        , graphEditorState : GraphEditorState
+        , mode : GraphViewMode
+        }
+    | EditingBuiltin { name : FuncName }
+
+type GraphViewMode
+    = EditingMode
+    | ViewingRunMode RunId
+
+{-
+Need to be able to do three things:
+- process updates (i.e. edit the current graph)
+- view the graph
+- compute the actions for each part of the graph
+-}
+
 -- Actions
 
 type Action
+    -- editor stuff
     = FilterElemPanel String
-    | CanvasMouseEvt (CollageLocation, PrimMouseEvent)
+    | OpenUDF FuncName
+    | OpenBuiltin FuncName
+    | OpenRun RunId
     -- graph ops
-    | MoveNode NodePath Point
-    | AddLambda
-    | AddApNode FuncId
-    | RemoveNode NodePath
-    | AddEdge Edge
-    | RemoveEdge Edge
-    | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
+    | GraphAction GraphAction
+    | CanvasMouseEvt (CollageLocation, PrimMouseEvent)
     -- running
     | StartExecution
     | ExecutionUpdate RunId Runtime.CallTree.ExecutionUpdate
@@ -49,7 +66,16 @@ type Action
 
 type GraphEditorAction
     = InternalAction GraphEditorInternalAction
-    | ExternalAction Action
+    | ExternalAction GraphAction
+
+type GraphAction
+    = MoveNode NodePath Point
+    | AddLambda
+    | AddApNode FuncId
+    | RemoveNode NodePath
+    | AddEdge Edge
+    | RemoveEdge Edge
+    | DropNodeInLambda { lambdaPath : NodePath, droppedNodePath : NodePath, posInLambda : Point }
 
 type GraphEditorInternalAction
     = DragNodeStart { nodePath : NodePath, offset : Point }
@@ -61,6 +87,10 @@ type GraphEditorInternalAction
     -- dropping into lambdas
     | OverLambda NodePath
     | NotOverLambda NodePath
+    -- viewing types & values at ports
+    | OverInPort InPortId
+    | OverOutPort OutPortId
+    | NotOverPort
 
 -- MODULE
 
@@ -171,27 +201,38 @@ getFuncOrCrash mod funcName =
     getFunc mod funcName
       |> getMaybeOrCrash ("no such function " ++ funcName)
 
+getRunOrCrash : State -> RunId -> Run
+getRunOrCrash state runId =
+    state.runs
+      |> D.get runId
+      |> getMaybeOrCrash "no such run found"
+
 -- ...
+
+currentUserFuncName : State -> FuncName
+currentUserFuncName state =
+    case state.viewState of
+      EditingUDF attrs -> attrs.name
+      _ -> Debug.crash "not currently editing UDF"
 
 getCurrentUserFunc : State -> UserFuncAttrs
 getCurrentUserFunc state =
-    case state.mod.userFuncs |> D.get state.editingFn of
+    case state.mod.userFuncs |> D.get (currentUserFuncName state) of
       Just (UserFunc attrs) -> attrs
       Just (BuiltinFunc _) -> Debug.crash "builtin func supposed to be user func"
-      Nothing -> Debug.crash <| "no func found named " ++ state.editingFn
+      Nothing -> Debug.crash <| "no func found named " ++ (currentUserFuncName state)
 
 getCurrentGraph : State -> Graph
 getCurrentGraph state =
     getCurrentUserFunc state |> .graph
 
-updateCurrentGraph : State -> (Graph -> Result String Graph) -> State
-updateCurrentGraph state updateFun =
-    let mod = state.mod
-        newUFs = state.mod.userFuncs
-                  |> D.update state.editingFn (\uFunc ->
+updateGraph : Module -> FuncName -> (Graph -> Result String Graph) -> Module
+updateGraph mod currentFuncName updateFun =
+    let newUFs = mod.userFuncs
+                  |> D.update currentFuncName (\uFunc ->
                       M.map (\(UserFunc attrs) ->
                           UserFunc { attrs | graph <- updateFun attrs.graph |> getOrCrash }) uFunc)
-    in { state | mod <- { mod | userFuncs <- newUFs } }
+    in { mod | userFuncs <- newUFs }
 
 getLambdaId : State -> (State, Int)
 getLambdaId state =
@@ -245,17 +286,19 @@ emptyLambdaNode =
 type alias Edge = { from : OutPortId, to : InPortId }
 
 type alias NodeDict = D.Dict NodeId PosNode
-type alias Graph = { nodes : NodeDict
-                   , edges : List Edge
-                   , nextApId : Int
-                   , nextLambdaId : Int
-                   }
+type alias Graph =
+    { nodes : NodeDict
+    , edges : List Edge
+    , nextApId : Int
+    , nextLambdaId : Int
+    }
 
-emptyGraph = { nodes = D.empty
-             , edges = []
-             , nextApId = 0
-             , nextLambdaId = 0
-             }
+emptyGraph =
+    { nodes = D.empty
+    , edges = []
+    , nextApId = 0
+    , nextLambdaId = 0
+    }
 
 -- OPERATIONS
 
@@ -398,6 +441,12 @@ usedAsValue nodePath graph =
           _ -> False
       _ -> False
 
+type alias CodeReq =
+    Maybe { runId : RunId
+          , mod : Module
+          , mainName : FuncName
+          }
+
 -- for codegen, there can be no free in or out ports.
 -- free in and out ports are an invalid state.
 -- TODO: annoyingly repetitive, again
@@ -438,10 +487,14 @@ freeOutPorts mod graph pathAbove =
 type alias GraphEditorState =
     { diagram : DC.Diagram Tag GraphEditorAction
     , mouseState : DI.MouseState Tag GraphEditorAction
-    , collageLoc : CollageLocation
-    , dragState : Maybe DraggingState
+    , mouseInteractionState : Maybe MouseInteractionState
     , pan : Point
     }
+
+type MouseInteractionState
+    = Dragging DraggingState
+    | HoveringInPort InPortId
+    | HoveringOutPort OutPortId
 
 type DraggingState
     = DraggingNode { nodePath : NodePath, offset : Point, overLambdaNode : Maybe NodePath } -- offset at lowest level
@@ -522,7 +575,8 @@ lambdaState state nodePath =
 
 type alias RunId = Int
 type alias Run =
-    { userFunc : UserFuncAttrs
+    { userFuncName : FuncName
+    , mod : Module
     , state : Runtime.CallTree.RunState
     }
 

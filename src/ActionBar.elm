@@ -6,8 +6,10 @@ import Html.Events exposing (..)
 
 import Signal as S
 import List as L
+import Dict as D
 
 import Model
+import Util exposing (..)
 
 import Debug
 
@@ -18,17 +20,59 @@ type alias Button =
     , action : Action
     }
 type Action
-    = CodeAction
+    = CodeAction CodeReq
     | NormalAction Model.Action
 
--- TODO: move to model or some other module?
-type alias CodeReq = Maybe (Model.RunId, Model.Module, String)
-
 getABState : Model.State -> State
-getABState smState =
-    [ [{ name = "Add Lambda", action = NormalAction Model.AddLambda }]
-    , [{ name = "Run", action = CodeAction }]
-    ]
+getABState state =
+    [ geToolsSection, runSection ]
+      |> L.filterMap (\sec -> sec state)
+
+geToolsSection : Model.State -> Maybe ButtonGroup
+geToolsSection state =
+    case state.viewState of
+      ViewingGraph attrs ->
+          case attrs.mode of
+            EditingMode ->
+                Just [ { name = "Add Lambda"
+                       , action = NormalAction Model.AddLambda
+                       }
+                     ]
+            ViewingRunMode _ ->
+                Nothing
+      EditingBuiltin _ ->
+          Nothing
+
+runSection : Model.State -> Maybe ButtonGroup
+runSection state =
+    -- only show run button if we are editing a graph with no free in ports
+    -- TODO: ideally button would be greyed out if there are free in ports,
+    -- and hovering would explain that you need to eliminate in ports.
+    case state.viewState of
+      ViewingGraph attrs ->
+          -- function to do this should be in model somewhere
+          let graph = mod.userFuncs
+                        |> D.get attrs.name
+                        |> getMaybeOrCrash "no such user func"
+                        |> (\UserFunc attrs -> attrs.graph)
+          in case attrs.mode of
+            EditingMode ->
+                case Model.freeInPorts state.mod graph [] of
+                  [] ->
+                      let codeReq =
+                            { runId = state.nextRunId
+                            , mod = state.mod
+                            , mainName = attrs.name
+                            }
+                      in Just [ { name = "Run"
+                                , action = CodeAction codeReq
+                                }
+                              ]
+                  _ -> Nothing
+            ViewingRunMode ->
+                Nothing
+      EditingBuiltin _ ->
+          Nothing
 
 view : S.Address Model.Action -> S.Address CodeReq -> Model.State -> Html
 view actionAddr codeAddr state =
@@ -47,8 +91,8 @@ viewButton : S.Address Model.Action -> S.Address CodeReq -> Model.State -> Butto
 viewButton actionAddr codeAddr state button =
     let actionAttr =
           case button.action of
-            CodeAction ->
-                onClick codeAddr <| Just (state.nextRunId, state.mod, state.editingFn)
+            CodeAction codeReq ->
+                onClick codeAddr <| Just codeReq
             NormalAction action ->
                 onClick actionAddr action
     in div

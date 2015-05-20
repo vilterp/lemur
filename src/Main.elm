@@ -36,18 +36,37 @@ import Http
 
 -- CONTROLLER
 
-upGraphAndRender : State -> (Graph -> Result String Graph) -> State
+-- TODO: overhaul this
+upGraphAndRender : Module -> FuncName -> (Graph -> Result String Graph) -> State
 upGraphAndRender state upFun =
-    let newState = updateCurrentGraph state upFun
+    let newState = updateGraph state upFun
         geState = newState.graphEditorState
     in { newState | graphEditorState <- { geState | diagram <- GE.render newState } }
 
 update : Action -> State -> State
 update action state =
     case Debug.log "action" action of
+      NoOp -> state
+      -- editor stuff
       FilterElemPanel filter ->
           { state | elemPanelFilter <- filter }
+      OpenUDF funcName ->
+          { state | viewState <- ViewingGraph <| EditingUDF { name = funcName
+                                                            , graphEditorState = GE.initState } }
+      OpenBuiltin funcName ->
+          { state | viewState <- EditingBuiltin { name = funcName } }
+      OpenRun runId ->
+          { state | viewState <- ViewingGraph <| ViewingRun { runId = runId
+                                                            , graphEditorState = GE.initState } }
+      -- running
+      StartExecution ->
+          state |> addNewRun
+      ExecutionUpdate runId update ->
+          state |> processExecutionUpdate runId update
+      -- graph ops
       CanvasMouseEvt (collageLoc, primMouseEvt) ->
+          -- TODO: save collage loc
+          
           let (newMS, actions) =
                   DI.processMouseEvent 
                       state.graphEditorState.diagram
@@ -66,42 +85,45 @@ update action state =
               newState = L.foldl process newMSState actions
               newGEState = newState.graphEditorState
           in { newState | graphEditorState <- { newGEState | diagram <- GE.render newState } }
-      -- add and remove
-      MoveNode nodePath point ->
-          upGraphAndRender state <| moveNode nodePath point
-      AddLambda ->
-          let (newState, lambdaIdNo) = getApId state
-              lambdaId = "lambda" ++ toString lambdaIdNo
-              posNode = { pos = defaultPos
-                        , id = lambdaId
-                        , node = emptyLambdaNode
-                        }
-          in upGraphAndRender newState <| addNode [lambdaId] posNode
-      AddApNode funcId ->
-          let (newState, apIdNo) = getLambdaId state
-              apId = "ap" ++ toString apIdNo
-              posNode = { pos = defaultPos
-                        , id = apId
-                        , node = ApNode funcId
-                        }
-          in upGraphAndRender newState <| addNode [apId] posNode
-      RemoveNode nodePath ->
-          upGraphAndRender state <| removeNode nodePath
-      AddEdge edge ->
-          upGraphAndRender state <| addEdge edge
-      RemoveEdge edge ->
-          upGraphAndRender state <| removeEdge edge
-      DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
-          if canBeDroppedInLambda (state |> getCurrentGraph) lambdaPath droppedNodePath
-          then upGraphAndRender state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
-          else state
-      -- running
-      StartExecution ->
-          state |> addNewRun
-      ExecutionUpdate runId update ->
-          state |> processExecutionUpdate runId update
-      -- 
-      NoOp -> state
+      GraphAction graphAction ->
+          case state.viewState of
+            ViewingGraph graphViewState ->
+                case graphViewState of
+                  EditingUDF attrs ->
+                      -- TODO: put this in GraphEditor's update function
+                      case graphAction of
+                        MoveNode nodePath point ->
+                            upGraphAndRender state <| moveNode nodePath point
+                        AddLambda ->
+                            let (newState, lambdaIdNo) = getApId state
+                                lambdaId = "lambda" ++ toString lambdaIdNo
+                                posNode = { pos = defaultPos
+                                          , id = lambdaId
+                                          , node = emptyLambdaNode
+                                          }
+                            in upGraphAndRender newState <| addNode [lambdaId] posNode
+                        AddApNode funcId ->
+                            let (newState, apIdNo) = getLambdaId state
+                                apId = "ap" ++ toString apIdNo
+                                posNode = { pos = defaultPos
+                                          , id = apId
+                                          , node = ApNode funcId
+                                          }
+                            in upGraphAndRender newState <| addNode [apId] posNode
+                        RemoveNode nodePath ->
+                            upGraphAndRender state <| removeNode nodePath
+                        AddEdge edge ->
+                            upGraphAndRender state <| addEdge edge
+                        RemoveEdge edge ->
+                            upGraphAndRender state <| removeEdge edge
+                        DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
+                            if canBeDroppedInLambda (state |> getCurrentGraph) lambdaPath droppedNodePath
+                            then upGraphAndRender state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
+                            else state
+                  ViewingRun _ ->
+                    Debug.crash "graph action while viewing run"
+            EditingBuiltin _ ->
+                Debug.crash "graph action while editing builtin"
 
 defaultPos = (0, 0)
 
@@ -142,16 +164,65 @@ topSection =
 
 centerSection : State -> Html
 centerSection state =
-    div
+    let (icon, label, mainView) =
+          case state.viewState of
+            ViewingGraph attrs ->
+                let mainView = GE.view state
+                in case attrs.mode of
+                  EditingMode ->
+                      ( udfIcon
+                      , attrs.name
+                      , mainView
+                      )
+                  ViewingRunMode runId ->
+                      ( runIcon
+                      , runLabel ( attrs.runId
+                                 , attrs.runId |> getRunOrCrash state
+                                 )
+                      , mainView
+                      )
+            EditingBuiltin attrs ->
+                ( builtinIcon
+                , attrs.name
+                , state.mod.builtinFuncs
+                    |> D.get attrs.name
+                    |> getMaybeOrCrash "no such builtin function"
+                    |> (\BuiltinFunc attrs -> builtinView attrs)
+                )
+    in div
       [ id "center" ]
-      [ -- TODO: tabs
-        div
+      [ div
+          [ class "panel-header" ]
+          [ div [ class "element-icon" ] [ icon |> asHtml ]
+          , div [ class "element-label" ] [ text label ]
+          ]
+      , div
           [ class "center-scroll" ]
           [ div
               [ id "canvas-viewport"
               , style [("width", "100%"), ("height", "100%")]
               ]
-              [ GE.view state ]
+              [ mainView ]
+          ]
+      ]
+
+-- TODO: make editable
+-- TODO: show / edit type sig
+builtinView : BuiltinFuncAttrs -> Html
+builtinView builtinAttrs =
+    div
+      [ class "builtin-editor" ]
+      [ div
+          [ class "builtin-params" ]
+          [ builtinAttrs.params |> toString |> text ]
+      , div
+          [ class "builtin-return-vals" ]
+          [ builtinAttrs.returnVals |> toString |> text ]
+      , div
+          [ class "builtin-code" ]
+          [ pre
+              [ class "builtin-code-pre" ]
+              [ builtinAttrs.pythonCode ]
           ]
       ]
 
@@ -179,9 +250,14 @@ lipsum2 = "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusa
 initState : State
 initState =
     { mod = TestData.helloMap
-    , editingFn = "main"
-    , graphEditorState = GE.initState
     , elemPanelFilter = ""
+    , collageLoc = editorLocFunc { width = 1280, 701 } -- specific to my 13" MBP :P
+    , viewState =
+        ViewingGraph
+          { name = "main"
+          , graphEditorState = GE.initState -- TODO check on this
+          , mode = EditingMode
+          }
     , nextRunId = 1
     , runs = D.empty
     }
@@ -208,7 +284,7 @@ main : Signal Html
 main =
   S.map view state
 
-codeExecutionRequests : S.Mailbox (Maybe (RunId, Module, String))
+codeExecutionRequests : S.Mailbox CodeReq
 codeExecutionRequests = 
     S.mailbox Nothing
 
@@ -217,14 +293,14 @@ port codeExecTasks =
     codeExecutionRequests.signal
       |> S.map requestAndSend
 
-requestAndSend : Maybe (RunId, Module, String) -> T.Task Http.Error ()
+requestAndSend : CodeReq -> T.Task Http.Error ()
 requestAndSend codeReq =
     case codeReq of
       Nothing -> T.succeed ()
-      Just (runId, mod, mainFunc) ->
+      Just {runId, mod, mainName} ->
           S.send htmlUpdates.address StartExecution
             `T.andThen`
-              (\_ -> requestExecution mod mainFunc
+              (\_ -> requestExecution mod mainName
                 `T.andThen` (sendToUpdates runId))
 
 sendToUpdates : RunId -> List Runtime.CallTree.ExecutionUpdate -> T.Task Http.Error ()

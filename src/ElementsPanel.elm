@@ -29,7 +29,7 @@ view addr state =
           , panelSection "Runs" (
                 state.runs
                   |> D.toList
-                  |> L.map runView
+                  |> L.map (runView addr)
                   |> ul [ class "module-elements" ]
               )
           ]
@@ -43,12 +43,24 @@ modElementView addr (funcId, func) =
       ]
       [ div [ class "element-icon" ] [ elementIcon func ]
       , div [ class "element-label" ] [ text <| Model.funcName func ]
+      , div
+          [ class "edit-button"
+          , let action = case func of
+                            Model.UserFunc attrs -> OpenUDF funcId
+                            Model.BuiltinFunc attrs -> OpenBuiltin funcId
+            in onClick addr action
+          ]
+          [ text "edit" ]
       ]
 
 -- TODO: click-to-open
-runView : (Model.RunId, Model.Run) -> Html
-runView (runId, run) =
+runView : S.Address Model.Action -> (Model.RunId, Model.Run) -> Html
+runView addr runInfo =
     li
       -- TODO: this isn't a module element, but want same style. refactor CSS...
-      [ class "module-element" ]
-      [ text <| "#" ++ toString runId ++ ": " ++ run.userFunc.name ++ (if Model.runIsDone run then " (done)" else "") ]
+      [ class "module-element"
+      , onClick addr <| OpenRun <| fst runInfo
+      ]
+      [ div [ class "element-icon" ] [ runIcon |> asHtml ]
+      , div [ class "element-label" ] [ runLabel runInfo |> text ]
+      ]

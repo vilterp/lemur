@@ -30,7 +30,7 @@ topLevelActions state =
                            , mouseUp <- Just <| stopBubbling <| always <| [InternalAction DragEnd] }
       _ -> emptyActionSet
 
-canvasActions : NodePath -> Maybe DraggingState -> ActionSet Tag GraphEditorAction
+canvasActions : NodePath -> Maybe MouseInteractionState -> ActionSet Tag GraphEditorAction
 canvasActions nodePath dragState =
     case dragState of
       Nothing ->
@@ -38,7 +38,7 @@ canvasActions nodePath dragState =
           then { emptyActionSet | mouseDown <- Just <|
                   stopBubbling <| \(MouseEvent evt) -> [InternalAction <| PanStart { offset = evt.offset }] }
           else emptyActionSet
-      Just dragging ->
+      Just (Dragging dragging) ->
           case dragging of
             DraggingNode attrs ->
                if | attrs.nodePath `directlyUnder` nodePath ->
@@ -73,7 +73,9 @@ directlyUnder xs ys = L.length xs - 1 == L.length ys
 outPortActions : State -> OutPortId -> ActionSet Tag GraphEditorAction
 outPortActions state portId =
     if outPortState state portId == NormalPort
-    then { emptyActionSet | mouseDown <- Just <| stopBubbling <|
+    then { emptyActionSet | mouseEnter <- Just <| stopBubbling <| OverOutPort portId
+                          , mouseLeave <- Just <| stopBubbling <| NotOverPort
+                          , mouseDown <- Just <| stopBubbling <|
               (\evt -> case mousePosAtPath evt [TopLevel, Canvas] of
                          Just pos -> [InternalAction <| DragEdgeStart { fromPort = portId, endPos = pos } ]
                          Nothing -> Debug.crash "mouse pos not found derp") }
@@ -90,4 +92,7 @@ inPortActions state portId =
                                    , InternalAction DragEnd
                                    ] }
             else emptyActionSet
+        Nothing ->
+            { emptyActionSet | mouseEnter <- Just <| stopBubbling <| OverInPort portId
+                             , mouseLeave <- Just <| stopBubbling <| NotOverPort }
         _ -> emptyActionSet

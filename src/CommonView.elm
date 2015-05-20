@@ -5,6 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Text exposing (defaultStyle)
 import Color
+import String
 
 import Diagrams.Core as DC
 import Diagrams.FillStroke as DFS
@@ -14,6 +15,7 @@ import Diagrams.Geom as DG
 import Diagrams.Pad as DP
 
 import Model
+import Runtime.CallTree
 
 panel : List Html -> List Html -> Html
 panel header_elems child_elems =
@@ -35,14 +37,20 @@ scrollPanel header_elems child_elems =
             ]
         ]
 
+icon : Color.Color -> Char -> DC.Diagram t a
+icon color letter =
+    (DC.text defaultStyle (String.fromChar letter))
+      `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid color)
+
+udfIcon = icon Color.lightBlue 'U'
+builtinIcon = icon Color.yellow 'B'
+runIcon = icon Color.green 'R'
+
 elementIcon : Model.Func -> Html
 elementIcon func =
-    let icon color letter =
-          (DC.text defaultStyle letter)
-            `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid color)
-        curIcon = case func of
-                    Model.UserFunc _ -> icon Color.lightBlue "U"
-                    Model.BuiltinFunc _ -> icon Color.yellow "B"
+    let curIcon = case func of
+                    Model.UserFunc _ -> udfIcon
+                    Model.BuiltinFunc _ -> builtinIcon
     in curIcon |> asHtml
 
 asHtml : DC.Diagram t a -> Html.Html
@@ -65,6 +73,12 @@ panelSection name contents =
           [ contents
           ]
       ]
+
+runLabel : (Model.RunId, Model.Run) -> String
+runLabel (runId, run) =
+    "#" ++ toString runId ++ ": "
+      ++ run.userFunc.name
+      ++ (if Model.runIsDone run then " (done)" else "")
 
 -- tooltip
 -- maybe this should go in a diagrams-contrib library or something
