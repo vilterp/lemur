@@ -7,7 +7,5 @@ deps:
 
 loc:
 	find src -regex ".*elm" | xargs wc -l
-
-diagramsloc:
 	find elm-diagrams/Diagrams -regex ".*elm" | xargs wc -l
 
