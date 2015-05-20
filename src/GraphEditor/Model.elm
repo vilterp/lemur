@@ -15,7 +15,7 @@ import Util exposing (..)
 -- would be nice
 type alias GraphViewModel =
     { mod : Module
-    , currentName : FuncName
+    , currentName : FuncName -- TODO: should prob just be name & graph
     , currentGraph : Graph
     , collageLoc : CollageLocation
     , editorState : GraphEditorState
@@ -30,7 +30,11 @@ makeViewModel : State -> GraphViewModel
 makeViewModel state =
     case state.viewState of
       ViewingGraph attrs ->
-          { mod = state.mod
+          { mod =
+              case attrs.mode of
+                EditingMode -> state.mod
+                ViewingRunMode runId ->
+                    state |> getRunOrCrash runId |> .mod
           , currentName = attrs.name
           , currentGraph =
                 state.mod.userFuncs
@@ -38,12 +42,12 @@ makeViewModel state =
                   |> getMaybeOrCrash "no such user func"
                   |> (\(UserFunc attrs) -> attrs.graph)
           , collageLoc = state.collageLoc
-          , editorState = attrs.graphEditorState
+          , editorState = attrs.editorState
           , mode =
               case attrs.mode of
                 EditingMode -> EditingModeDenorm
                 ViewingRunMode runId ->
-                    ViewingRunModeDenorm runId (getRunOrCrash state runId)
+                    ViewingRunModeDenorm runId (getRunOrCrash runId state)
           }
       EditingBuiltin _ -> Debug.crash "expecting graph viewing state"
 
@@ -107,3 +111,30 @@ lambdaState viewModel nodePath =
             Nothing -> NormalLS
       _ -> NormalLS
 
+updateGraphFun : (Graph -> Result String Graph) -> GraphViewModel -> GraphViewModel
+updateGraphFun updateFun viewModel =
+    let newGraph = updateFun viewModel.currentGraph |> getOrCrash
+        newUdf = UserFunc { name = viewModel.currentName
+                          , graph = newGraph
+                          }
+        newUserFuncs =
+            viewModel.mod.userFuncs
+              |> D.insert viewModel.currentName newUdf
+        currentMod = viewModel.mod
+        newModule = { currentMod | userFuncs <- newUserFuncs }
+    in { viewModel | currentGraph <- newGraph
+                   , mod <- newModule }
+
+getLambdaId : Graph -> (Graph, Int)
+getLambdaId graph =
+    let lid = graph.nextLambdaId
+    in ( { graph | nextLambdaId <- lid + 1 }
+       , lid
+       )
+
+getApId : Graph -> (Graph, Int)
+getApId graph =
+    let aid = graph.nextApId
+    in ( { graph | nextApId <- aid + 1 }
+       , aid
+       )

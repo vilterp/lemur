@@ -16,6 +16,7 @@ import Diagrams.Wiring as DW
 import Diagrams.Interact as DI
 
 import Model exposing (..)
+import GraphEditor.Model exposing (..)
 import Util exposing (..)
 
 import ElementsPanel
@@ -36,13 +37,6 @@ import Http
 
 -- CONTROLLER
 
--- TODO: overhaul this
-upGraphAndRender : Module -> FuncName -> (Graph -> Result String Graph) -> State
-upGraphAndRender state upFun =
-    let newState = updateGraph state upFun
-        geState = newState.graphEditorState
-    in { newState | graphEditorState <- { geState | diagram <- GE.render newState } }
-
 update : Action -> State -> State
 update action state =
     case Debug.log "action" action of
@@ -51,76 +45,65 @@ update action state =
       FilterElemPanel filter ->
           { state | elemPanelFilter <- filter }
       OpenUDF funcName ->
-          { state | viewState <- ViewingGraph <| EditingUDF { name = funcName
-                                                            , graphEditorState = GE.initState } }
+          { state | viewState <- ViewingGraph { name = funcName
+                                              , editorState = GE.initState
+                                              , mode = EditingMode
+                                              } }
       OpenBuiltin funcName ->
           { state | viewState <- EditingBuiltin { name = funcName } }
       OpenRun runId ->
-          { state | viewState <- ViewingGraph <| ViewingRun { runId = runId
-                                                            , graphEditorState = GE.initState } }
+          let run = state |> getRunOrCrash runId
+          in { state | viewState <- ViewingGraph { name = run.userFuncName
+                                                 , editorState = GE.initState
+                                                 , mode = ViewingRunMode runId
+                                                 } }
       -- running
-      StartExecution ->
-          state |> addNewRun
+      StartExecution funcName ->
+          state |> addNewRun funcName
       ExecutionUpdate runId update ->
           state |> processExecutionUpdate runId update
       -- graph ops
       CanvasMouseEvt (collageLoc, primMouseEvt) ->
           -- TODO: save collage loc
-          
-          let (newMS, actions) =
-                  DI.processMouseEvent 
-                      state.graphEditorState.diagram
-                      state.graphEditorState.mouseState
-                      primMouseEvt
-              geState = state.graphEditorState
-              newMSState = { state | graphEditorState <- { geState | mouseState <- newMS
-                                                                   , collageLoc <- collageLoc } }
-              process : GraphEditorAction -> State -> State
-              process act state =
-                    case Debug.log "ge act" act of
-                      InternalAction intAct ->
-                          GE.update intAct state
-                      ExternalAction extAct ->
-                          update extAct state
-              newState = L.foldl process newMSState actions
-              newGEState = newState.graphEditorState
-          in { newState | graphEditorState <- { newGEState | diagram <- GE.render newState } }
+          case state.viewState of
+            ViewingGraph graphViewAttrs ->
+                case graphViewAttrs.mode of
+                  EditingMode ->
+                      let clState = { state | collageLoc <- collageLoc }
+                          (newMS, actions) =
+                              DI.processMouseEvent 
+                                  graphViewAttrs.editorState.diagram
+                                  graphViewAttrs.editorState.mouseState
+                                  primMouseEvt
+                          process : GraphEditorAction -> GraphViewModel -> GraphViewModel
+                          process act viewModel =
+                              case Debug.log "ge act" act of
+                                InternalAction intAct ->
+                                    GE.update intAct (makeViewModel state)
+                                ExternalAction graphAction ->
+                                    GE.updateGraph graphAction viewModel
+                          newViewModel = L.foldl process (makeViewModel clState) actions
+                          newEditorState = newViewModel.editorState
+                      in { clState | mod <- newViewModel.mod
+                                   , viewState <- ViewingGraph
+                                        { graphViewAttrs | editorState <-
+                                                              { newEditorState | mouseState <- newMS } } }
+                  ViewingRunMode runId ->
+                      Debug.crash "canvas action while viewing run"
+            EditingBuiltin _ ->
+                Debug.crash "canvas action while editing builtin"
       GraphAction graphAction ->
           case state.viewState of
-            ViewingGraph graphViewState ->
-                case graphViewState of
-                  EditingUDF attrs ->
+            ViewingGraph graphViewAttrs ->
+                case graphViewAttrs.mode of
+                  EditingMode ->
                       -- TODO: put this in GraphEditor's update function
-                      case graphAction of
-                        MoveNode nodePath point ->
-                            upGraphAndRender state <| moveNode nodePath point
-                        AddLambda ->
-                            let (newState, lambdaIdNo) = getApId state
-                                lambdaId = "lambda" ++ toString lambdaIdNo
-                                posNode = { pos = defaultPos
-                                          , id = lambdaId
-                                          , node = emptyLambdaNode
-                                          }
-                            in upGraphAndRender newState <| addNode [lambdaId] posNode
-                        AddApNode funcId ->
-                            let (newState, apIdNo) = getLambdaId state
-                                apId = "ap" ++ toString apIdNo
-                                posNode = { pos = defaultPos
-                                          , id = apId
-                                          , node = ApNode funcId
-                                          }
-                            in upGraphAndRender newState <| addNode [apId] posNode
-                        RemoveNode nodePath ->
-                            upGraphAndRender state <| removeNode nodePath
-                        AddEdge edge ->
-                            upGraphAndRender state <| addEdge edge
-                        RemoveEdge edge ->
-                            upGraphAndRender state <| removeEdge edge
-                        DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
-                            if canBeDroppedInLambda (state |> getCurrentGraph) lambdaPath droppedNodePath
-                            then upGraphAndRender state <| moveNodeToLambda lambdaPath droppedNodePath posInLambda -- TODO: posInLambda not right; it's jumping
-                            else state
-                  ViewingRun _ ->
+                      -- GE.updateGraph graphAction (makeViewModel state)
+                      let newViewModel = GE.updateGraph graphAction (makeViewModel state)
+                          newViewAttrs = { graphViewAttrs | editorState <- newViewModel.editorState }
+                      in { state | viewState <- ViewingGraph newViewAttrs
+                                 , mod <- newViewModel.mod }
+                  ViewingRunMode _ ->
                     Debug.crash "graph action while viewing run"
             EditingBuiltin _ ->
                 Debug.crash "graph action while editing builtin"
@@ -176,8 +159,8 @@ centerSection state =
                       )
                   ViewingRunMode runId ->
                       ( runIcon
-                      , runLabel ( attrs.runId
-                                 , attrs.runId |> getRunOrCrash state
+                      , runLabel ( runId
+                                 , state |> getRunOrCrash runId
                                  )
                       , mainView
                       )
@@ -187,7 +170,7 @@ centerSection state =
                 , state.mod.builtinFuncs
                     |> D.get attrs.name
                     |> getMaybeOrCrash "no such builtin function"
-                    |> (\BuiltinFunc attrs -> builtinView attrs)
+                    |> (\(BuiltinFunc attrs) -> builtinView attrs)
                 )
     in div
       [ id "center" ]
@@ -222,7 +205,7 @@ builtinView builtinAttrs =
           [ class "builtin-code" ]
           [ pre
               [ class "builtin-code-pre" ]
-              [ builtinAttrs.pythonCode ]
+              [ builtinAttrs.pythonCode |> text ]
           ]
       ]
 
@@ -255,7 +238,7 @@ initState =
     , viewState =
         ViewingGraph
           { name = "main"
-          , graphEditorState = GE.initState -- TODO check on this
+          , editorState = GE.initState -- TODO check on this
           , mode = EditingMode
           }
     , nextRunId = 1
@@ -298,7 +281,7 @@ requestAndSend codeReq =
     case codeReq of
       Nothing -> T.succeed ()
       Just {runId, mod, mainName} ->
-          S.send htmlUpdates.address StartExecution
+          S.send htmlUpdates.address (StartExecution mainName)
             `T.andThen`
               (\_ -> requestExecution mod mainName
                 `T.andThen` (sendToUpdates runId))

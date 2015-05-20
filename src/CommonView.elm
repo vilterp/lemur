@@ -37,14 +37,14 @@ scrollPanel header_elems child_elems =
             ]
         ]
 
-icon : Color.Color -> Char -> DC.Diagram t a
-icon color letter =
-    (DC.text defaultStyle (String.fromChar letter))
-      `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid color)
+icon : Color.Color -> Color.Color -> Char -> DC.Diagram t a
+icon bgColor letterColor letter =
+    (DC.text { defaultStyle | color <- letterColor } (String.fromChar letter))
+      `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid bgColor)
 
-udfIcon = icon Color.lightBlue 'U'
-builtinIcon = icon Color.yellow 'B'
-runIcon = icon Color.green 'R'
+udfIcon = icon Color.lightBlue Color.black 'U'
+builtinIcon = icon Color.yellow Color.black 'B'
+runIcon = icon Color.brown Color.white 'R'
 
 elementIcon : Model.Func -> Html
 elementIcon func =

@@ -31,7 +31,7 @@ type alias State =
 type ViewState
     = ViewingGraph
         { name : FuncName
-        , graphEditorState : GraphEditorState
+        , editorState : GraphEditorState
         , mode : GraphViewMode
         }
     | EditingBuiltin { name : FuncName }
@@ -59,7 +59,7 @@ type Action
     | GraphAction GraphAction
     | CanvasMouseEvt (CollageLocation, PrimMouseEvent)
     -- running
-    | StartExecution
+    | StartExecution FuncName
     | ExecutionUpdate RunId Runtime.CallTree.ExecutionUpdate
     --
     | NoOp
@@ -107,6 +107,8 @@ type alias Module =
 
 -- TODO: can't figure out rn how to use extensible records here
 type Func
+    -- TODO: this should be called textual or something, not builtin.
+    -- these are also "user defined"
     = BuiltinFunc BuiltinFuncAttrs
     | UserFunc UserFuncAttrs
 
@@ -201,8 +203,8 @@ getFuncOrCrash mod funcName =
     getFunc mod funcName
       |> getMaybeOrCrash ("no such function " ++ funcName)
 
-getRunOrCrash : State -> RunId -> Run
-getRunOrCrash state runId =
+getRunOrCrash : RunId -> State -> Run
+getRunOrCrash runId state =
     state.runs
       |> D.get runId
       |> getMaybeOrCrash "no such run found"
@@ -498,15 +500,15 @@ type alias Run =
     , state : Runtime.CallTree.RunState
     }
 
-{-
-addNewRun : State -> State
-addNewRun state =
+addNewRun : FuncName -> State -> State
+addNewRun funcName state =
     let rid = state.nextRunId
-        newRun = { userFunc = getCurrentUserFunc state
-                 , state = Runtime.CallTree.InProgress Runtime.CallTree.RunningRoot }
+        newRun = { userFuncName = funcName
+                 , mod = state.mod
+                 , state = Runtime.CallTree.InProgress Runtime.CallTree.RunningRoot
+                 }
     in { state | nextRunId <- rid + 1
                , runs <- D.insert rid newRun state.runs }
--}
 
 processExecutionUpdate : RunId -> Runtime.CallTree.ExecutionUpdate -> State -> State
 processExecutionUpdate runId update state =
