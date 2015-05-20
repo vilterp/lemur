@@ -52,7 +52,6 @@ update action state =
               |> renderState
       OpenBuiltin funcName ->
           { state | viewState <- EditingBuiltin { name = funcName } }
-              |> renderState
       OpenRun runId ->
           let run = state |> getRunOrCrash runId
           in { state | viewState <- ViewingGraph { name = run.userFuncName
@@ -95,7 +94,8 @@ update action state =
                                   { graphViewAttrs | editorState <-
                                                         { newEditorState | mouseState <- newMS } } }
             EditingBuiltin _ ->
-                Debug.crash "canvas action while editing builtin"
+                let l = Debug.log "canvas action while editing builtin" ()
+                in state
       GraphAction graphAction ->
           case state.viewState of
             ViewingGraph graphViewAttrs ->
@@ -110,9 +110,11 @@ update action state =
                       in { state | viewState <- ViewingGraph newViewAttrs
                                  , mod <- newViewModel.mod }
                   ViewingRunMode _ ->
-                    Debug.log "graph action while viewing run" state
+                    let l = Debug.log "graph action while viewing run" ()
+                    in state
             EditingBuiltin _ ->
-                Debug.crash "graph action while editing builtin"
+                let l = Debug.log "graph action while editing builtin" ()
+                in state
 
 defaultPos = (0, 0)
 
