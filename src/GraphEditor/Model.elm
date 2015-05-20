@@ -8,6 +8,7 @@ import Debug
 import Diagrams.Wiring exposing (CollageLocation)
 
 import Model exposing (..)
+import Model.Graph exposing (..)
 import Util exposing (..)
 
 -- TODO: having one of these for the python code editor

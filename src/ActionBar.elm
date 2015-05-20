@@ -9,6 +9,7 @@ import List as L
 import Dict as D
 
 import Model exposing (..)
+import Model.Graph exposing (..)
 import Util exposing (..)
 
 import Debug

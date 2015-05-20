@@ -16,6 +16,7 @@ import GraphEditor.View as GEV
 import Util exposing (..)
 
 import Model exposing (..)
+import Model.Graph exposing (..)
 import GraphEditor.Model exposing (..)
 
 -- just the stuff from State that is relevant to this view,

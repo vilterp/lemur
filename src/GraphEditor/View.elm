@@ -21,6 +21,7 @@ import Diagrams.Query exposing (..)
 import Diagrams.Debug exposing (..)
 
 import Model exposing (..)
+import Model.Graph exposing (..)
 import GraphEditor.Model exposing (..)
 import GraphEditor.Styles exposing (..)
 import GraphEditor.Actions exposing (..)
