@@ -26,6 +26,12 @@ type GraphViewModeDenorm
     = EditingModeDenorm
     | ViewingRunModeDenorm RunId Run
 
+isReadOnly : GraphViewModel -> Bool
+isReadOnly viewModel =
+    case viewModel.mode of
+      EditingModeDenorm -> False
+      _ -> True
+
 makeViewModel : State -> GraphViewModel
 makeViewModel state =
     case state.viewState of

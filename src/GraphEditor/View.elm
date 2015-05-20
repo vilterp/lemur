@@ -81,10 +81,13 @@ outSlot viewModel (nodePath, slotId) =
         |> hcat
         |> flexLeft
 
-nodeTitle : String -> Color.Color -> NodePath -> GEDiagram
-nodeTitle name color nodePath =
+nodeTitle : GraphViewModel -> String -> Color.Color -> NodePath -> GEDiagram
+nodeTitle viewModel name color nodePath =
     let title = name |> text titleStyle
-        xOut = tagWithActions XOut (nodeXOutActions nodePath) <| nodeXGlyph color
+        xOut = if isReadOnly viewModel
+               then empty
+               else nodeXGlyph color
+                      |> tagWithActions XOut (nodeXOutActions nodePath)
     in hcat <| [ xOut
                , hspace 5
                , title
@@ -112,7 +115,7 @@ viewPosNode : GraphViewModel -> NodePath -> PosNode -> GEDiagram
 viewPosNode viewModel pathAbove pn =
   let nodePath = pathAbove ++ [pn.id]
   in viewNode pn.node nodePath viewModel
-      |> tagWithActions (NodeIdT pn.id) (posNodeActions nodePath viewModel.editorState.mouseInteractionState)
+      |> tagWithActions (NodeIdT pn.id) (posNodeActions nodePath viewModel)
       |> move pn.pos
 
 viewNode : Node -> NodePath -> GraphViewModel -> GEDiagram
@@ -130,7 +133,7 @@ viewLambdaNode node nodePath viewModel =
         funcOutPortColor = portStateColorCode <| outPortState viewModel (nodePath, FuncValueSlot)
         funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions viewModel (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
-        titleRow = flexCenter (nodeTitle "Lambda" Color.black nodePath) funcOutPort
+        titleRow = flexCenter (nodeTitle viewModel "Lambda" Color.black nodePath) funcOutPort
         nodes = zcat <| L.map (viewPosNode viewModel nodePath) <| D.values node.nodes
         subCanvas =
             [nodes, rect node.dims.width node.dims.height invisible]
@@ -150,14 +153,14 @@ viewApNode funcId nodePath viewModel =
         funcOutPortColor = portStateColorCode <| outPortState viewModel (nodePath, FuncValueSlot)
         funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions viewModel (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
-        titleRow = flexCenter (nodeTitle (func |> funcName) Color.white nodePath) funcOutPort
+        titleRow = flexCenter (nodeTitle viewModel (func |> funcName) Color.white nodePath) funcOutPort
         params = InputGroup <| L.map ApParamSlot (func |> funcParams viewModel.mod)
         results = OutputGroup <| L.map ApResultSlot (func |> funcReturnVals viewModel.mod)
     in nodeDiagram nodePath viewModel titleRow [params, results] apNodeBgColor -- TODO: lighter
 
 viewIfNode : NodePath -> GraphViewModel -> GEDiagram
 viewIfNode nodePath viewModel =
-    let titleRow = flexRight (nodeTitle "If" Color.white nodePath)
+    let titleRow = flexRight (nodeTitle viewModel "If" Color.white nodePath)
         inSlots = InputGroup [IfCondSlot, IfTrueSlot, IfFalseSlot]
         outSlots = OutputGroup [IfResultSlot]
     in nodeDiagram nodePath viewModel titleRow [inSlots, outSlots] ifNodeBgColor
@@ -219,7 +222,10 @@ viewGraph viewModel =
         --g = Debug.log "graph" graph.nodes
         nodes = zcat <| L.map (viewPosNode viewModel []) <| D.values graph.nodes
         edges = zcat <| L.map (viewEdge nodes) graph.edges
-        edgeXOuts = zcat <| L.map (viewEdgeXOut nodes) graph.edges
+        edgeXOuts = if isReadOnly viewModel then empty
+                    else graph.edges
+                          |> L.map (viewEdgeXOut nodes)
+                          |> zcat
         draggingEdge =
             case viewModel.editorState.mouseInteractionState of
               Just (Dragging (DraggingEdge attrs)) ->

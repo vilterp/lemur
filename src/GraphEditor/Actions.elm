@@ -12,14 +12,25 @@ import Model exposing (..)
 import GraphEditor.Model exposing (..)
 import Util exposing (..)
 
-posNodeActions nodePath mouseInteractionState =
-    case mouseInteractionState of
-      Nothing -> { emptyActionSet | mouseDown <- Just <| stopBubbling <|
-                                      \(MouseEvent evt) -> [InternalAction <| DragNodeStart { nodePath = nodePath, offset = evt.offset }] }
-      _ -> emptyActionSet
+onlyIfEditing : GraphViewModel -> ActionSet Tag GraphEditorAction -> ActionSet Tag GraphEditorAction
+onlyIfEditing viewModel actSet =
+    if isReadOnly viewModel then emptyActionSet else actSet
+
+posNodeActions nodePath viewModel =
+    (case viewModel.editorState.mouseInteractionState of
+        Nothing -> { emptyActionSet | mouseDown <- Just <| stopBubbling <|
+                                        \(MouseEvent evt) ->
+                                            [InternalAction <|
+                                                DragNodeStart { nodePath = nodePath
+                                                              , offset = evt.offset
+                                                              }] }
+        _ -> emptyActionSet)
+      |> onlyIfEditing viewModel
 
 nodeXOutActions : NodePath -> ActionSet Tag GraphEditorAction
-nodeXOutActions nodePath = { emptyActionSet | click <- Just <| keepBubbling <| always <| [ExternalAction <| RemoveNode nodePath] }
+nodeXOutActions nodePath =
+  { emptyActionSet | click <- Just <| keepBubbling <| always <|
+                        [ExternalAction <| RemoveNode nodePath] }
 
 edgeXOutActions edge = { emptyActionSet | click <- Just <| keepBubbling <| always <| [ExternalAction <| RemoveEdge edge] }
 
@@ -65,6 +76,7 @@ canvasActions nodePath mouseInteractionState =
                                  , mouseUp <- Just <| stopBubbling <| always <| [InternalAction DragEnd] }
                else emptyActionSet
             _ -> emptyActionSet
+      Just _ -> emptyActionSet
 
 atOrAbove xs ys = (xs /= ys) && (L.length xs <= L.length ys)
 
@@ -72,14 +84,25 @@ directlyUnder xs ys = L.length xs - 1 == L.length ys
 
 outPortActions : GraphViewModel -> OutPortId -> ActionSet Tag GraphEditorAction
 outPortActions viewModel portId =
-    if outPortState viewModel portId == NormalPort
-    then { emptyActionSet | mouseEnter <- Just <| stopBubbling <| always [InternalAction <| OverOutPort portId]
-                          , mouseLeave <- Just <| stopBubbling <| always [InternalAction <| NotOverPort]
-                          , mouseDown <- Just <| stopBubbling <|
-              (\evt -> case mousePosAtPath evt [TopLevel, Canvas] of
-                         Just pos -> [InternalAction <| DragEdgeStart { fromPort = portId, endPos = pos } ]
-                         Nothing -> Debug.crash "mouse pos not found derp") }
-    else emptyActionSet
+    let hoverActions =
+          { emptyActionSet | mouseEnter <- Just <| stopBubbling <| always [InternalAction <| OverOutPort portId]
+                           , mouseLeave <- Just <| stopBubbling <| always [InternalAction <| NotOverPort] }
+    in case viewModel.mode of
+      EditingModeDenorm ->
+          if outPortState viewModel portId == NormalPort
+          then case viewModel.editorState.mouseInteractionState of
+              Just (Dragging (DraggingEdge _)) ->
+                  emptyActionSet
+              _ -> 
+                  { hoverActions | mouseDown <- Just <| stopBubbling <|
+                            (\evt -> case mousePosAtPath evt [TopLevel, Canvas] of
+                                        Just pos -> [ InternalAction <| NotOverPort
+                                                    , InternalAction <| DragEdgeStart { fromPort = portId, endPos = pos }
+                                                    ]
+                                        Nothing -> Debug.crash "mouse pos not found derp") }
+          else emptyActionSet
+      ViewingRunModeDenorm _ _ ->
+          hoverActions
 
 inPortActions : GraphViewModel -> InPortId -> ActionSet Tag GraphEditorAction
 inPortActions viewModel portId =
@@ -92,7 +115,6 @@ inPortActions viewModel portId =
                                    , InternalAction DragEnd
                                    ] }
             else emptyActionSet
-        Nothing ->
+        _ ->
             { emptyActionSet | mouseEnter <- Just <| stopBubbling <| always [InternalAction <| OverInPort portId]
                              , mouseLeave <- Just <| stopBubbling <| always [InternalAction <| NotOverPort] }
-        _ -> emptyActionSet

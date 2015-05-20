@@ -67,31 +67,28 @@ update action state =
           -- TODO: save collage loc
           case state.viewState of
             ViewingGraph graphViewAttrs ->
-                case graphViewAttrs.mode of
-                  EditingMode ->
-                      let clState = { state | collageLoc <- collageLoc }
-                          (newMS, actions) =
-                              DI.processMouseEvent 
-                                  graphViewAttrs.editorState.diagram
-                                  graphViewAttrs.editorState.mouseState
-                                  primMouseEvt
-                          process : GraphEditorAction -> GraphViewModel -> GraphViewModel
-                          process act viewModel =
-                              case Debug.log "ge act" act of
-                                InternalAction intAct ->
-                                    GE.update intAct (makeViewModel state)
-                                ExternalAction graphAction ->
-                                    GE.updateGraph graphAction viewModel
-                          newViewModel =
-                              L.foldl process (makeViewModel clState) actions
-                                |> GE.render
-                          newEditorState = newViewModel.editorState
-                      in { clState | mod <- newViewModel.mod
-                                   , viewState <- ViewingGraph
-                                        { graphViewAttrs | editorState <-
-                                                              { newEditorState | mouseState <- newMS } } }
-                  ViewingRunMode runId ->
-                      Debug.crash "canvas action while viewing run"
+                let clState = { state | collageLoc <- collageLoc }
+                    (newMS, actions) =
+                        DI.processMouseEvent 
+                            graphViewAttrs.editorState.diagram
+                            graphViewAttrs.editorState.mouseState
+                            primMouseEvt
+                    process : GraphEditorAction -> GraphViewModel -> GraphViewModel
+                    process act viewModel =
+                        case Debug.log "ge act" act of
+                          InternalAction intAct ->
+                              GE.update intAct viewModel
+                          ExternalAction graphAction ->
+                              GE.updateGraph graphAction viewModel
+                    newViewModel =
+                        L.foldl process (makeViewModel clState) actions
+                          |> GE.render
+                    newEditorState = newViewModel.editorState
+                    mis = newEditorState.mouseInteractionState
+                in { clState | mod <- newViewModel.mod
+                             , viewState <- ViewingGraph
+                                  { graphViewAttrs | editorState <-
+                                                        { newEditorState | mouseState <- newMS } } }
             EditingBuiltin _ ->
                 Debug.crash "canvas action while editing builtin"
       GraphAction graphAction ->
