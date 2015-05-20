@@ -49,14 +49,17 @@ update action state =
                                               , editorState = GE.initState
                                               , mode = EditingMode
                                               } }
+              |> renderState
       OpenBuiltin funcName ->
           { state | viewState <- EditingBuiltin { name = funcName } }
+              |> renderState
       OpenRun runId ->
           let run = state |> getRunOrCrash runId
           in { state | viewState <- ViewingGraph { name = run.userFuncName
                                                  , editorState = GE.initState
                                                  , mode = ViewingRunMode runId
                                                  } }
+                |> renderState
       -- running
       StartExecution funcName ->
           state
@@ -112,6 +115,15 @@ update action state =
                 Debug.crash "graph action while editing builtin"
 
 defaultPos = (0, 0)
+
+renderState : State -> State
+renderState state =
+    case state.viewState of
+      ViewingGraph attrs ->
+          let vm = makeViewModel state |> GE.render
+          in { state | viewState <- ViewingGraph { attrs | editorState <- vm.editorState } }
+      EditingBuiltin _ ->
+          Debug.crash "unexpected usage of renderState"
 
 -- VIEW
 
@@ -247,6 +259,7 @@ initState =
     , nextRunId = 1
     , runs = D.empty
     }
+      |> renderState
 
 htmlUpdates = S.mailbox Model.NoOp
 
