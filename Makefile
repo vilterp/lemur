@@ -1,6 +1,6 @@
 all:
 	elm make src/Main.elm --output=public/elm.js
 
-install:
+deps:
 	elm package install --yes
 	npm install
