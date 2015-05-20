@@ -12,7 +12,7 @@ My senior thesis in CS at the University of Chicago, advised by Borja Sotomayor 
 
 In root directory:
 
-1. `$ make install` (installs Elm and Node packages)
+1. `$ make deps` (installs Elm and Node packages)
 2. `$ make` (compiles Elm code)
 3. `$ node server.js`
 3. Open browser to [http://localhost:3000/](http://localhost:3000/)
