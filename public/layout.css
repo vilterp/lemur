@@ -253,6 +253,7 @@ li.module-element.selected {
 
 .element-icon {
     float: left;
+    margin-right: 5px;
 }
 
 .element-label-text {

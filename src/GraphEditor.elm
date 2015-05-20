@@ -20,14 +20,16 @@ import GraphEditor.Model exposing (..)
 
 -- just the stuff from State that is relevant to this view,
 -- fetched from the dictionaries
-render : GraphViewModel -> DC.Diagram Tag GraphEditorAction
-render viewModel = GEV.viewGraph viewModel
+render : GraphViewModel -> GraphViewModel
+render viewModel =
+    let editorState = viewModel.editorState
+    in { viewModel | editorState <-
+                        { editorState | diagram <- GEV.viewGraph viewModel } }
 
-view : State -> Html.Html
-view state =
-    let viewModel = makeViewModel state
-        dims = state.collageLoc.dims
-    in [DC.render viewModel.editorState.diagram]
+view : DW.CollageLocation -> GraphEditorState -> Html.Html
+view collageLoc editorState =
+    let dims = collageLoc.dims
+    in [DC.render editorState.diagram]
           |> Graphics.Collage.collage (round dims.width) (round dims.height)
           |> Html.fromElement
 
@@ -43,6 +45,7 @@ initState =
 -- TODO: make this in pre-panned space
 defaultPos = (0, 0)
 
+-- NOTE: doesn't re-render
 update : GraphEditorInternalAction -> GraphViewModel -> GraphViewModel
 update action viewModel =
     let geState = viewModel.editorState
@@ -88,11 +91,12 @@ update action viewModel =
                   { geState | mouseInteractionState <- Nothing }
     in { viewModel | editorState <- newGeState }
 
+-- NOTE: doesn't re-render
 updateGraph : GraphAction -> GraphViewModel -> GraphViewModel
 updateGraph act viewModel =
     case act of
       MoveNode nodePath point ->
-          viewModel |> upGraphAndRender (moveNode nodePath point)
+          viewModel |> updateGraphFun (moveNode nodePath point)
       AddLambda ->
           let (newGraph, lambdaIdNo) = viewModel.currentGraph |> getApId
               newVM = viewModel |> updateGraphFun (always <| Ok newGraph)
@@ -101,7 +105,7 @@ updateGraph act viewModel =
                         , id = lambdaId
                         , node = emptyLambdaNode
                         }
-          in newVM |> upGraphAndRender (addNode [lambdaId] posNode)
+          in newVM |> updateGraphFun (addNode [lambdaId] posNode)
       AddApNode funcId ->
           let (newGraph, apIdNo) = viewModel.currentGraph |> getLambdaId
               newVM = viewModel |> updateGraphFun (always <| Ok newGraph)
@@ -110,21 +114,14 @@ updateGraph act viewModel =
                         , id = apId
                         , node = ApNode funcId
                         }
-          in newVM |> upGraphAndRender (addNode [apId] posNode)
+          in newVM |> updateGraphFun (addNode [apId] posNode)
       RemoveNode nodePath ->
-          viewModel |> upGraphAndRender (removeNode nodePath)
+          viewModel |> updateGraphFun (removeNode nodePath)
       AddEdge edge ->
-          viewModel |> upGraphAndRender (addEdge edge)
+          viewModel |> updateGraphFun (addEdge edge)
       RemoveEdge edge ->
-          viewModel |> upGraphAndRender (removeEdge edge)
+          viewModel |> updateGraphFun (removeEdge edge)
       DropNodeInLambda {lambdaPath, droppedNodePath, posInLambda} ->
           if canBeDroppedInLambda viewModel.currentGraph lambdaPath droppedNodePath
-          then viewModel |> upGraphAndRender (moveNodeToLambda lambdaPath droppedNodePath posInLambda)
+          then viewModel |> updateGraphFun (moveNodeToLambda lambdaPath droppedNodePath posInLambda)
           else viewModel
-
-upGraphAndRender : (Graph -> Result String Graph) -> GraphViewModel -> GraphViewModel
-upGraphAndRender updateFun viewModel =
-    let newViewModel = viewModel |> updateGraphFun updateFun
-        geState = viewModel.editorState
-        newGeState = { geState | diagram <- render newViewModel }
-    in { newViewModel | editorState <- newGeState }

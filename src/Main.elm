@@ -82,7 +82,9 @@ update action state =
                                     GE.update intAct (makeViewModel state)
                                 ExternalAction graphAction ->
                                     GE.updateGraph graphAction viewModel
-                          newViewModel = L.foldl process (makeViewModel clState) actions
+                          newViewModel =
+                              L.foldl process (makeViewModel clState) actions
+                                |> GE.render
                           newEditorState = newViewModel.editorState
                       in { clState | mod <- newViewModel.mod
                                    , viewState <- ViewingGraph
@@ -99,7 +101,9 @@ update action state =
                   EditingMode ->
                       -- TODO: put this in GraphEditor's update function
                       -- GE.updateGraph graphAction (makeViewModel state)
-                      let newViewModel = GE.updateGraph graphAction (makeViewModel state)
+                      let newViewModel =
+                              GE.updateGraph graphAction (makeViewModel state)
+                                |> GE.render
                           newViewAttrs = { graphViewAttrs | editorState <- newViewModel.editorState }
                       in { state | viewState <- ViewingGraph newViewAttrs
                                  , mod <- newViewModel.mod }
@@ -150,7 +154,7 @@ centerSection state =
     let (icon, label, mainView) =
           case state.viewState of
             ViewingGraph attrs ->
-                let mainView = GE.view state
+                let mainView = GE.view state.collageLoc attrs.editorState
                 in case attrs.mode of
                   EditingMode ->
                       ( udfIcon
