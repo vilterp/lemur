@@ -1,11 +1,21 @@
-module Runtime.CallTree where
-
-import Runtime.Value exposing (..)
+module Runtime.Model where
 
 import Dict as D
 import List as L
 import Result as R
 import Debug
+
+type alias Record = D.Dict String Value
+
+type alias FilePath = String
+
+type Value
+  = IntVal Int
+  | StringVal String
+  | ListVal (List Value)
+  | RecordVal Record
+  | FileVal FilePath
+  | FunctionVal
 
 type alias ApId = String
 

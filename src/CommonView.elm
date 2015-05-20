@@ -15,7 +15,7 @@ import Diagrams.Geom as DG
 import Diagrams.Pad as DP
 
 import Model
-import Runtime.CallTree
+import Runtime.Model
 
 panel : List Html -> List Html -> Html
 panel header_elems child_elems =

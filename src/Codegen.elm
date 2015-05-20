@@ -7,6 +7,7 @@ import String as S
 import Debug
 
 import Model exposing (..)
+import Model.Graph exposing (..)
 import Codegen.AST as AST
 import Codegen.PrettyPrint as PrettyPrint
 

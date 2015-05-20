@@ -14,7 +14,7 @@ import Diagrams.Core as DC
 import Diagrams.Interact as DI
 
 -- hope this doesn't become circular
-import Runtime.CallTree
+import Runtime.Model
 
 import Util exposing (..)
 
@@ -60,7 +60,7 @@ type Action
     | CanvasMouseEvt (CollageLocation, PrimMouseEvent)
     -- running
     | StartExecution FuncName
-    | ExecutionUpdate RunId Runtime.CallTree.ExecutionUpdate
+    | ExecutionUpdate RunId Runtime.Model.ExecutionUpdate
     --
     | NoOp
 
@@ -252,7 +252,7 @@ type alias RunId = Int
 type alias Run =
     { userFuncName : FuncName
     , mod : Module
-    , state : Runtime.CallTree.RunState
+    , state : Runtime.Model.RunState
     }
 
 addNewRun : FuncName -> State -> State
@@ -260,17 +260,17 @@ addNewRun funcName state =
     let rid = state.nextRunId
         newRun = { userFuncName = funcName
                  , mod = state.mod
-                 , state = Runtime.CallTree.InProgress Runtime.CallTree.RunningRoot
+                 , state = Runtime.Model.InProgress Runtime.Model.RunningRoot
                  }
     in { state | nextRunId <- rid + 1
                , runs <- D.insert rid newRun state.runs }
 
-processExecutionUpdate : RunId -> Runtime.CallTree.ExecutionUpdate -> State -> State
+processExecutionUpdate : RunId -> Runtime.Model.ExecutionUpdate -> State -> State
 processExecutionUpdate runId update state =
     let updateFun maybeRun =
           case maybeRun of
             Just run ->
-                let newRunState = run.state |> Runtime.CallTree.processUpdate update
+                let newRunState = run.state |> Runtime.Model.processUpdate update
                 in Just <| { run | state <- Debug.log "NRS" newRunState }
             Nothing -> Debug.crash "received update for nonexistent run"
     in { state | runs <- D.update runId updateFun state.runs }
@@ -278,5 +278,5 @@ processExecutionUpdate runId update state =
 runIsDone : Run -> Bool
 runIsDone run =
     case run.state of
-      Runtime.CallTree.InProgress _ -> False
-      Runtime.CallTree.DoneRunning _ -> True
+      Runtime.Model.InProgress _ -> False
+      Runtime.Model.DoneRunning _ -> True

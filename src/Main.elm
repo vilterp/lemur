@@ -28,7 +28,7 @@ import TestData
 
 import Codegen
 import Runtime.Decode
-import Runtime.CallTree
+import Runtime.Model
 import Http
 
 -- MODEL
@@ -304,14 +304,14 @@ requestAndSend codeReq =
               (\_ -> requestExecution mod mainName
                 `T.andThen` (sendToUpdates runId))
 
-sendToUpdates : RunId -> List Runtime.CallTree.ExecutionUpdate -> T.Task Http.Error ()
+sendToUpdates : RunId -> List Runtime.Model.ExecutionUpdate -> T.Task Http.Error ()
 sendToUpdates runId updates =
     updates
       |> L.map (\update -> ExecutionUpdate runId update |> S.send htmlUpdates.address)
       |> (\tasks -> T.sequence tasks
                       `T.andThen` (always <| T.succeed ()))
 
-requestExecution : Module -> String -> T.Task Http.Error (List Runtime.CallTree.ExecutionUpdate)
+requestExecution : Module -> String -> T.Task Http.Error (List Runtime.Model.ExecutionUpdate)
 requestExecution mod mainFunc =
     Http.url "/run_python" [("code", Codegen.moduleToPython mainFunc mod)]
       |> Http.get Runtime.Decode.updateList
