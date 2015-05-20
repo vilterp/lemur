@@ -10,6 +10,8 @@ defaultTextStyle = T.defaultStyle
 titleStyle = { defaultTextStyle | bold <- True }
 slotLabelStyle = defaultTextStyle
 
+tooltipStyle = { defaultTextStyle | color <- Color.white }
+
 defaultLineStyle = C.defaultLine
 
 edgeStyle = { defaultLineStyle | width <- 3 }

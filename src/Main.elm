@@ -59,7 +59,9 @@ update action state =
                                                  } }
       -- running
       StartExecution funcName ->
-          state |> addNewRun funcName
+          state
+            |> addNewRun funcName
+            |> update (OpenRun <| state.nextRunId)
       ExecutionUpdate runId update ->
           state |> processExecutionUpdate runId update
       -- graph ops
@@ -105,7 +107,7 @@ update action state =
                       in { state | viewState <- ViewingGraph newViewAttrs
                                  , mod <- newViewModel.mod }
                   ViewingRunMode _ ->
-                    Debug.crash "graph action while viewing run"
+                    Debug.log "graph action while viewing run" state
             EditingBuiltin _ ->
                 Debug.crash "graph action while editing builtin"
 

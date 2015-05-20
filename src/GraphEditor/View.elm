@@ -25,6 +25,7 @@ import GraphEditor.Model exposing (..)
 import GraphEditor.Styles exposing (..)
 import GraphEditor.Actions exposing (..)
 import Util exposing (..)
+import CommonView
 
 type alias GEDiagram = Diagram Tag GraphEditorAction
 
@@ -232,7 +233,18 @@ viewGraph viewModel =
                   [viewDraggingEdge attrs.fromPort nodes attrs.endPos]
               _ -> []
         -- TODO: tooltip
-    in draggingEdge ++ [edgeXOuts, edges, nodes]
+        toolTip =
+            let ttSettings = CommonView.defaultTooltipSettings
+                tt dir =
+                  text tooltipStyle "sup"
+                      |> CommonView.tooltip { ttSettings | direction <- dir }
+            in case viewModel.editorState.mouseInteractionState of
+              Just (HoveringInPort inPortId) ->
+                  [ tt Right |> move (getInPortCoords nodes inPortId) ]
+              Just (HoveringOutPort outPortId) ->
+                  [ tt Left |> move (getOutPortCoords nodes outPortId) ]
+              _ -> []
+    in toolTip ++ draggingEdge ++ [edgeXOuts, edges, nodes]
         |> zcat
         |> pad 10000
         |> tagWithActions Canvas (canvasActions [] viewModel.editorState.mouseInteractionState)
