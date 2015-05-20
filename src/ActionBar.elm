@@ -8,34 +8,34 @@ import Signal as S
 import List as L
 import Dict as D
 
-import Model
+import Model exposing (..)
 import Util exposing (..)
 
 import Debug
 
-type alias State = List ButtonGroup
+type alias ABState = List ButtonGroup
 type alias ButtonGroup = List Button
 type alias Button =
     { name : String
-    , action : Action
+    , action : ABAction
     }
-type Action
+type ABAction
     = CodeAction CodeReq
-    | NormalAction Model.Action
+    | NormalAction Action
 
-getABState : Model.State -> State
+getABState : State -> ABState
 getABState state =
     [ geToolsSection, runSection ]
       |> L.filterMap (\sec -> sec state)
 
-geToolsSection : Model.State -> Maybe ButtonGroup
+geToolsSection : State -> Maybe ButtonGroup
 geToolsSection state =
     case state.viewState of
       ViewingGraph attrs ->
           case attrs.mode of
             EditingMode ->
                 Just [ { name = "Add Lambda"
-                       , action = NormalAction Model.AddLambda
+                       , action = NormalAction <| GraphAction AddLambda
                        }
                      ]
             ViewingRunMode _ ->
@@ -43,7 +43,7 @@ geToolsSection state =
       EditingBuiltin _ ->
           Nothing
 
-runSection : Model.State -> Maybe ButtonGroup
+runSection : State -> Maybe ButtonGroup
 runSection state =
     -- only show run button if we are editing a graph with no free in ports
     -- TODO: ideally button would be greyed out if there are free in ports,
@@ -51,13 +51,13 @@ runSection state =
     case state.viewState of
       ViewingGraph attrs ->
           -- function to do this should be in model somewhere
-          let graph = mod.userFuncs
+          let graph = state.mod.userFuncs
                         |> D.get attrs.name
                         |> getMaybeOrCrash "no such user func"
-                        |> (\UserFunc attrs -> attrs.graph)
+                        |> (\(UserFunc attrs) -> attrs.graph)
           in case attrs.mode of
             EditingMode ->
-                case Model.freeInPorts state.mod graph [] of
+                case freeInPorts state.mod graph [] of
                   [] ->
                       let codeReq =
                             { runId = state.nextRunId
@@ -69,26 +69,26 @@ runSection state =
                                 }
                               ]
                   _ -> Nothing
-            ViewingRunMode ->
+            ViewingRunMode _ ->
                 Nothing
       EditingBuiltin _ ->
           Nothing
 
-view : S.Address Model.Action -> S.Address CodeReq -> Model.State -> Html
+view : S.Address Action -> S.Address (Maybe CodeReq) -> State -> Html
 view actionAddr codeAddr state =
     getABState state
-      |> L.map (viewButtonGroup actionAddr codeAddr state)
+      |> L.map (viewButtonGroup actionAddr codeAddr)
       |> L.intersperse buttonGroupSep
       |> div [ id "action-bar" ]
 
-viewButtonGroup : S.Address Model.Action -> S.Address CodeReq -> Model.State -> ButtonGroup -> Html
-viewButtonGroup actionAddr codeAddr state bg =
-    L.map (viewButton actionAddr codeAddr state) bg
+viewButtonGroup : S.Address Action -> S.Address (Maybe CodeReq) -> ButtonGroup -> Html
+viewButtonGroup actionAddr codeAddr bg =
+    L.map (viewButton actionAddr codeAddr) bg
       |> div [ class "action-bar-button-group" ]
 
 -- Later: KB shortcut (for display), icon, callback (?)
-viewButton : S.Address Model.Action -> S.Address CodeReq -> Model.State -> Button -> Html
-viewButton actionAddr codeAddr state button =
+viewButton : S.Address Action -> S.Address (Maybe CodeReq) -> Button -> Html
+viewButton actionAddr codeAddr button =
     let actionAttr =
           case button.action of
             CodeAction codeReq ->

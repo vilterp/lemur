@@ -9,10 +9,11 @@ import Diagrams.Geom exposing (..)
 import Diagrams.Actions exposing (..)
 
 import Model exposing (..)
+import GraphEditor.Model exposing (..)
 import Util exposing (..)
 
-posNodeActions nodePath dragState =
-    case dragState of
+posNodeActions nodePath mouseInteractionState =
+    case mouseInteractionState of
       Nothing -> { emptyActionSet | mouseDown <- Just <| stopBubbling <|
                                       \(MouseEvent evt) -> [InternalAction <| DragNodeStart { nodePath = nodePath, offset = evt.offset }] }
       _ -> emptyActionSet
@@ -22,17 +23,17 @@ nodeXOutActions nodePath = { emptyActionSet | click <- Just <| keepBubbling <| a
 
 edgeXOutActions edge = { emptyActionSet | click <- Just <| keepBubbling <| always <| [ExternalAction <| RemoveEdge edge] }
 
-topLevelActions state =
-    case state.graphEditorState.dragState of
-      Just (DragPanning _) ->
+topLevelActions mouseInteractionState =
+    case mouseInteractionState of
+      Just (Dragging (DragPanning _)) ->
           { emptyActionSet | mouseMove <- Just <|
                                 keepBubbling <| \(MouseEvent evt) -> [InternalAction <| PanTo evt.offset]
                            , mouseUp <- Just <| stopBubbling <| always <| [InternalAction DragEnd] }
       _ -> emptyActionSet
 
 canvasActions : NodePath -> Maybe MouseInteractionState -> ActionSet Tag GraphEditorAction
-canvasActions nodePath dragState =
-    case dragState of
+canvasActions nodePath mouseInteractionState =
+    case mouseInteractionState of
       Nothing ->
           if nodePath == []
           then { emptyActionSet | mouseDown <- Just <|
@@ -69,23 +70,22 @@ atOrAbove xs ys = (xs /= ys) && (L.length xs <= L.length ys)
 
 directlyUnder xs ys = L.length xs - 1 == L.length ys
 
--- TODO: check state
-outPortActions : State -> OutPortId -> ActionSet Tag GraphEditorAction
-outPortActions state portId =
-    if outPortState state portId == NormalPort
-    then { emptyActionSet | mouseEnter <- Just <| stopBubbling <| OverOutPort portId
-                          , mouseLeave <- Just <| stopBubbling <| NotOverPort
+outPortActions : GraphViewModel -> OutPortId -> ActionSet Tag GraphEditorAction
+outPortActions viewModel portId =
+    if outPortState viewModel portId == NormalPort
+    then { emptyActionSet | mouseEnter <- Just <| stopBubbling <| always [InternalAction <| OverOutPort portId]
+                          , mouseLeave <- Just <| stopBubbling <| always [InternalAction <| NotOverPort]
                           , mouseDown <- Just <| stopBubbling <|
               (\evt -> case mousePosAtPath evt [TopLevel, Canvas] of
                          Just pos -> [InternalAction <| DragEdgeStart { fromPort = portId, endPos = pos } ]
                          Nothing -> Debug.crash "mouse pos not found derp") }
     else emptyActionSet
 
-inPortActions : State -> InPortId -> ActionSet Tag GraphEditorAction
-inPortActions state portId =
-    let portState = inPortState state portId
-    in case state.graphEditorState.dragState of
-        Just (DraggingEdge attrs) ->
+inPortActions : GraphViewModel -> InPortId -> ActionSet Tag GraphEditorAction
+inPortActions viewModel portId =
+    let portState = inPortState viewModel portId
+    in case viewModel.editorState.mouseInteractionState of
+        Just (Dragging (DraggingEdge attrs)) ->
             if portState == ValidPort
             then { emptyActionSet | mouseUp <- Just <| stopBubbling
                       <| always <| [ ExternalAction <| AddEdge { from = attrs.fromPort, to = portId }
@@ -93,6 +93,6 @@ inPortActions state portId =
                                    ] }
             else emptyActionSet
         Nothing ->
-            { emptyActionSet | mouseEnter <- Just <| stopBubbling <| OverInPort portId
-                             , mouseLeave <- Just <| stopBubbling <| NotOverPort }
+            { emptyActionSet | mouseEnter <- Just <| stopBubbling <| always [InternalAction <| OverInPort portId]
+                             , mouseLeave <- Just <| stopBubbling <| always [InternalAction <| NotOverPort] }
         _ -> emptyActionSet

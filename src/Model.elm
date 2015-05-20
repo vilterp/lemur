@@ -209,31 +209,7 @@ getRunOrCrash state runId =
 
 -- ...
 
-currentUserFuncName : State -> FuncName
-currentUserFuncName state =
-    case state.viewState of
-      EditingUDF attrs -> attrs.name
-      _ -> Debug.crash "not currently editing UDF"
-
-getCurrentUserFunc : State -> UserFuncAttrs
-getCurrentUserFunc state =
-    case state.mod.userFuncs |> D.get (currentUserFuncName state) of
-      Just (UserFunc attrs) -> attrs
-      Just (BuiltinFunc _) -> Debug.crash "builtin func supposed to be user func"
-      Nothing -> Debug.crash <| "no func found named " ++ (currentUserFuncName state)
-
-getCurrentGraph : State -> Graph
-getCurrentGraph state =
-    getCurrentUserFunc state |> .graph
-
-updateGraph : Module -> FuncName -> (Graph -> Result String Graph) -> Module
-updateGraph mod currentFuncName updateFun =
-    let newUFs = mod.userFuncs
-                  |> D.update currentFuncName (\uFunc ->
-                      M.map (\(UserFunc attrs) ->
-                          UserFunc { attrs | graph <- updateFun attrs.graph |> getOrCrash }) uFunc)
-    in { mod | userFuncs <- newUFs }
-
+{-
 getLambdaId : State -> (State, Int)
 getLambdaId state =
     let lid = state |> getCurrentGraph |> .nextLambdaId
@@ -247,6 +223,7 @@ getApId state =
     in ( updateCurrentGraph state (\graph -> Ok { graph | nextApId <- aid + 1 })
        , aid
        )
+-}
 
 -- GRAPH (TODO: maybe factor this out?)
 
@@ -442,10 +419,10 @@ usedAsValue nodePath graph =
       _ -> False
 
 type alias CodeReq =
-    Maybe { runId : RunId
-          , mod : Module
-          , mainName : FuncName
-          }
+    { runId : RunId
+    , mod : Module
+    , mainName : FuncName
+    }
 
 -- for codegen, there can be no free in or out ports.
 -- free in and out ports are an invalid state.
@@ -512,65 +489,6 @@ type Tag
     | XOut
     | Canvas
 
-type PortState
-    = NormalPort
-    | InvalidPort
-    | TakenPort
-    | ValidPort
-
-type LambdaState
-    = ValidNodeOverLS
-    | InvalidNodeOverLS
-    | NormalLS
-
--- TODO(perf): these are same for duration of drag. could save somewhere.
-inPortState : State -> InPortId -> PortState
-inPortState state (thisNodePath, slotId) =
-    if funcOutPortUsed (state |> getCurrentGraph) thisNodePath
-    then InvalidPort
-    else case state.graphEditorState.dragState of
-           Just (DraggingEdge attrs) ->
-              let (fromNodePath, _) = attrs.fromPort
-              in if -- dragging from this node
-                    | thisNodePath `startsWith` fromNodePath -> InvalidPort
-                    -- this node already taken
-                    | inPortTaken (state |> getCurrentGraph) (thisNodePath, slotId) -> TakenPort
-                    -- no cycles
-                    | thisNodePath `Set.member` attrs.upstreamNodes -> InvalidPort
-                    | L.any (\unPath -> thisNodePath `startsWith` unPath) (Set.toList <| attrs.upstreamNodes) -> InvalidPort
-                    -- can't go from in lambda to out
-                    | goingUpTree fromNodePath thisNodePath -> InvalidPort
-                    -- TODO: wrong type!
-                    | otherwise -> ValidPort
-           _ -> NormalPort
-
--- TODO: highlight as valid when you mouse over an in port of same type
-outPortState : State -> OutPortId -> PortState
-outPortState state (nodePath, slotId) =
-    if | funcOutPortUsed (state |> getCurrentGraph) nodePath ->
-            case slotId of
-              FuncValueSlot -> NormalPort
-              _ -> InvalidPort
-       | anyNormalPortsUsed (state |> getCurrentGraph) nodePath ->
-            case slotId of
-              FuncValueSlot -> InvalidPort
-              _ -> NormalPort
-       | otherwise -> NormalPort
-
--- TODO: use these in other queries
-lambdaState : State -> NodePath -> LambdaState
-lambdaState state nodePath =
-    case state.graphEditorState.dragState of
-      Just (DraggingNode attrs) ->
-          case attrs.overLambdaNode of
-            Just overLN -> if overLN == nodePath
-                           then if canBeDroppedInLambda (state |> getCurrentGraph) overLN attrs.nodePath
-                                then ValidNodeOverLS
-                                else InvalidNodeOverLS
-                           else NormalLS
-            Nothing -> NormalLS
-      _ -> NormalLS
-
 -- RUNS
 
 type alias RunId = Int
@@ -580,6 +498,7 @@ type alias Run =
     , state : Runtime.CallTree.RunState
     }
 
+{-
 addNewRun : State -> State
 addNewRun state =
     let rid = state.nextRunId
@@ -587,6 +506,7 @@ addNewRun state =
                  , state = Runtime.CallTree.InProgress Runtime.CallTree.RunningRoot }
     in { state | nextRunId <- rid + 1
                , runs <- D.insert rid newRun state.runs }
+-}
 
 processExecutionUpdate : RunId -> Runtime.CallTree.ExecutionUpdate -> State -> State
 processExecutionUpdate runId update state =

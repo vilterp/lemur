@@ -39,15 +39,15 @@ modElementView : S.Address Model.Action -> (Model.FuncName, Model.Func) -> Html
 modElementView addr (funcId, func) =
     li
       [ class "module-element"
-      , onClick addr <| Model.AddApNode funcId 
+      , onClick addr <| Model.GraphAction <| Model.AddApNode funcId 
       ]
       [ div [ class "element-icon" ] [ elementIcon func ]
       , div [ class "element-label" ] [ text <| Model.funcName func ]
       , div
           [ class "edit-button"
           , let action = case func of
-                            Model.UserFunc attrs -> OpenUDF funcId
-                            Model.BuiltinFunc attrs -> OpenBuiltin funcId
+                            Model.UserFunc attrs -> Model.OpenUDF funcId
+                            Model.BuiltinFunc attrs -> Model.OpenBuiltin funcId
             in onClick addr action
           ]
           [ text "edit" ]
@@ -59,7 +59,7 @@ runView addr runInfo =
     li
       -- TODO: this isn't a module element, but want same style. refactor CSS...
       [ class "module-element"
-      , onClick addr <| OpenRun <| fst runInfo
+      , onClick addr <| Model.OpenRun <| fst runInfo
       ]
       [ div [ class "element-icon" ] [ runIcon |> asHtml ]
       , div [ class "element-label" ] [ runLabel runInfo |> text ]

@@ -21,6 +21,7 @@ import Diagrams.Query exposing (..)
 import Diagrams.Debug exposing (..)
 
 import Model exposing (..)
+import GraphEditor.Model exposing (..)
 import GraphEditor.Styles exposing (..)
 import GraphEditor.Actions exposing (..)
 import Util exposing (..)
@@ -51,14 +52,16 @@ inSlotLabel sid =
       IfTrueSlot -> "if true"
       IfFalseSlot -> "if false"
 
-inSlot : State -> InPortId -> LayoutRow Tag GraphEditorAction
-inSlot state (nodePath, slotId) =
-    let stateColor = portStateColorCode <| inPortState state (nodePath, slotId)
-    in flexRight <| hcat [ tagWithActions (InPortT slotId) (inPortActions state (nodePath, slotId))
-                              <| portCirc stateColor
-                         , hspace 5
-                         , inSlotLabel slotId |> text slotLabelStyle
-                         ]
+inSlot : GraphViewModel -> InPortId -> LayoutRow Tag GraphEditorAction
+inSlot viewModel (nodePath, slotId) =
+    let stateColor = portStateColorCode <| inPortState viewModel (nodePath, slotId)
+    in [ portCirc stateColor
+          |> tagWithActions (InPortT slotId) (inPortActions viewModel (nodePath, slotId))
+       , hspace 5
+       , inSlotLabel slotId |> text slotLabelStyle
+       ]
+        |> hcat
+        |> flexRight
 
 outSlotLabel : OutSlotId -> String
 outSlotLabel sid =
@@ -67,14 +70,16 @@ outSlotLabel sid =
       IfResultSlot -> "result"
       FuncValueSlot -> "" -- not used
 
-outSlot : State -> OutPortId -> LayoutRow Tag GraphEditorAction
-outSlot state (nodePath, slotId) =
-    let stateColor = portStateColorCode <| outPortState state (nodePath, slotId)
-    in flexLeft <| hcat [ outSlotLabel slotId |> text slotLabelStyle
-                        , hspace 5
-                        , tagWithActions (OutPortT slotId) (outPortActions state (nodePath, slotId))
-                            <| portCirc stateColor
-                        ]
+outSlot : GraphViewModel -> OutPortId -> LayoutRow Tag GraphEditorAction
+outSlot viewModel (nodePath, slotId) =
+    let stateColor = portStateColorCode <| outPortState viewModel (nodePath, slotId)
+    in [ outSlotLabel slotId |> text slotLabelStyle
+       , hspace 5
+       , portCirc stateColor
+          |> tagWithActions (OutPortT slotId) (outPortActions viewModel (nodePath, slotId))
+       ]
+        |> hcat
+        |> flexLeft
 
 nodeTitle : String -> Color.Color -> NodePath -> GEDiagram
 nodeTitle name color nodePath =
@@ -89,68 +94,73 @@ nodeTitle name color nodePath =
 type SlotGroup = InputGroup (List InSlotId)
                | OutputGroup (List OutSlotId)
 
-nodeDiagram : NodePath -> State -> LayoutRow Tag GraphEditorAction -> List SlotGroup -> Color.Color -> GEDiagram
-nodeDiagram nodePath state titleRow slotGroups color =
+nodeDiagram : NodePath -> GraphViewModel -> LayoutRow Tag GraphEditorAction -> List SlotGroup -> Color.Color -> GEDiagram
+nodeDiagram nodePath viewModel titleRow slotGroups color =
     let viewGroup : SlotGroup -> List (LayoutRow Tag GraphEditorAction)
         viewGroup group =
             case group of
-              InputGroup ids -> L.map (\inSlotId -> inSlot state (nodePath, inSlotId)) ids
-              OutputGroup ids -> L.map (\outSlotId -> outSlot state (nodePath, outSlotId)) ids
-    in background (fillAndStroke (Solid color) defaultStroke) <|
-          layout <| [titleRow, hrule nodeTopDivider 3]
-                      ++ (intercalate [hrule nodeMiddleDivider 3] (L.map viewGroup slotGroups))
+              InputGroup ids -> L.map (\inSlotId -> inSlot viewModel (nodePath, inSlotId)) ids
+              OutputGroup ids -> L.map (\outSlotId -> outSlot viewModel (nodePath, outSlotId)) ids
+    in [titleRow, hrule nodeTopDivider 3]
+        ++ (intercalate [hrule nodeMiddleDivider 3] (L.map viewGroup slotGroups))
+        |> layout
+        |> background (fillAndStroke (Solid color) defaultStroke)
+                      
 
 -- TODO: can cache diagram in PosNode to improve performance
-viewPosNode : State -> NodePath -> PosNode -> GEDiagram
-viewPosNode state pathAbove pn =
+viewPosNode : GraphViewModel -> NodePath -> PosNode -> GEDiagram
+viewPosNode viewModel pathAbove pn =
   let nodePath = pathAbove ++ [pn.id]
-  in viewNode pn.node nodePath state
-      |> tagWithActions (NodeIdT pn.id) (posNodeActions nodePath state.graphEditorState.dragState)
+  in viewNode pn.node nodePath viewModel
+      |> tagWithActions (NodeIdT pn.id) (posNodeActions nodePath viewModel.editorState.mouseInteractionState)
       |> move pn.pos
 
-viewNode : Node -> NodePath -> State -> GEDiagram
-viewNode node nodePath state =
+viewNode : Node -> NodePath -> GraphViewModel -> GEDiagram
+viewNode node nodePath viewModel =
     alignTop <| alignLeft <|
       case node of
-        ApNode attrs -> viewApNode attrs nodePath state
-        IfNode -> viewIfNode nodePath state
-        LambdaNode attrs -> viewLambdaNode attrs nodePath state
+        ApNode attrs -> viewApNode attrs nodePath viewModel
+        IfNode -> viewIfNode nodePath viewModel
+        LambdaNode attrs -> viewLambdaNode attrs nodePath viewModel
 
 -- BUG: flickers when mouse gets inside of its own canvas. need to think this through.
-viewLambdaNode : LambdaNodeAttrs -> NodePath -> State -> GEDiagram
-viewLambdaNode node nodePath state =
+viewLambdaNode : LambdaNodeAttrs -> NodePath -> GraphViewModel -> GEDiagram
+viewLambdaNode node nodePath viewModel =
     let -- TODO: this is same as viewApNode; factor out
-        funcOutPortColor = portStateColorCode <| outPortState state (nodePath, FuncValueSlot)
-        funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions state (nodePath, FuncValueSlot))
+        funcOutPortColor = portStateColorCode <| outPortState viewModel (nodePath, FuncValueSlot)
+        funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions viewModel (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
         titleRow = flexCenter (nodeTitle "Lambda" Color.black nodePath) funcOutPort
-        nodes = zcat <| L.map (viewPosNode state nodePath) <| D.values node.nodes
-        subCanvas = centered <| tagWithActions Canvas (canvasActions nodePath state.graphEditorState.dragState) <|
-                      pad 7 <| zcat [nodes, rect node.dims.width node.dims.height invisible]
-        lState = lambdaState state nodePath
-    in background (fillAndStroke (Solid <| lambdaNodeBgColor lState) defaultStroke) <|
-        layout <| [titleRow, hrule nodeTopDivider 3, subCanvas]
+        nodes = zcat <| L.map (viewPosNode viewModel nodePath) <| D.values node.nodes
+        subCanvas =
+            [nodes, rect node.dims.width node.dims.height invisible]
+              |> zcat
+              |> pad 7
+              |> tagWithActions Canvas (canvasActions nodePath viewModel.editorState.mouseInteractionState)
+              |> centered
+        lState = lambdaState viewModel nodePath
+    in [titleRow, hrule nodeTopDivider 3, subCanvas]
+          |> layout
+          |> background (fillAndStroke (Solid <| lambdaNodeBgColor lState) defaultStroke)
 
 -- TODO: padding is awkward
-viewApNode : FuncId -> NodePath -> State -> GEDiagram
-viewApNode funcId nodePath state =
-    let func = getFunc state.mod funcId |> getMaybeOrCrash "no such func"
-        funcOutPortColor = portStateColorCode <| outPortState state (nodePath, FuncValueSlot)
-        funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions state (nodePath, FuncValueSlot))
+viewApNode : FuncId -> NodePath -> GraphViewModel -> GEDiagram
+viewApNode funcId nodePath viewModel =
+    let func = getFunc viewModel.mod funcId |> getMaybeOrCrash "no such func"
+        funcOutPortColor = portStateColorCode <| outPortState viewModel (nodePath, FuncValueSlot)
+        funcOutPort = tagWithActions (OutPortT FuncValueSlot) (outPortActions viewModel (nodePath, FuncValueSlot))
                           <| portCirc funcOutPortColor
         titleRow = flexCenter (nodeTitle (func |> funcName) Color.white nodePath) funcOutPort
-        params = InputGroup <| L.map ApParamSlot (func |> funcParams state.mod)
-        results = OutputGroup <| L.map ApResultSlot (func |> funcReturnVals state.mod)
-    in nodeDiagram nodePath state titleRow [params, results] apNodeBgColor -- TODO: lighter
+        params = InputGroup <| L.map ApParamSlot (func |> funcParams viewModel.mod)
+        results = OutputGroup <| L.map ApResultSlot (func |> funcReturnVals viewModel.mod)
+    in nodeDiagram nodePath viewModel titleRow [params, results] apNodeBgColor -- TODO: lighter
 
-viewIfNode : NodePath -> State -> GEDiagram
-viewIfNode nodePath state =
+viewIfNode : NodePath -> GraphViewModel -> GEDiagram
+viewIfNode nodePath viewModel =
     let titleRow = flexRight (nodeTitle "If" Color.white nodePath)
         inSlots = InputGroup [IfCondSlot, IfTrueSlot, IfFalseSlot]
         outSlots = OutputGroup [IfResultSlot]
-    in nodeDiagram nodePath state titleRow [inSlots, outSlots] ifNodeBgColor
-
---viewLambdaNode : ...
+    in nodeDiagram nodePath viewModel titleRow [inSlots, outSlots] ifNodeBgColor
 
 -- edges
 
@@ -198,20 +208,28 @@ getEdgeCoords nodesDia edg =
 viewEdgeXOut : GEDiagram -> Edge -> GEDiagram
 viewEdgeXOut nodesDia edge =
   let edgeCoords = getEdgeCoords nodesDia edge
-  in tagWithActions XOut (edgeXOutActions edge) <| move edgeCoords.to <| edgeXGlyph normalPortColor
+  in edgeXGlyph normalPortColor
+      |> move edgeCoords.to
+      |> tagWithActions XOut (edgeXOutActions edge)
 
-viewGraph : State -> GEDiagram
-viewGraph state = 
+viewGraph : GraphViewModel -> GEDiagram
+viewGraph viewModel = 
     -- TODO: draw lambda nodes under other nodes
-    let graph = state |> getCurrentGraph
+    let graph = viewModel.currentGraph
         --g = Debug.log "graph" graph.nodes
-        nodes = zcat <| L.map (viewPosNode state []) <| D.values graph.nodes
+        nodes = zcat <| L.map (viewPosNode viewModel []) <| D.values graph.nodes
         edges = zcat <| L.map (viewEdge nodes) graph.edges
         edgeXOuts = zcat <| L.map (viewEdgeXOut nodes) graph.edges
-        draggingEdge = case state.graphEditorState.dragState of
-                         Just (DraggingEdge attrs) -> [viewDraggingEdge attrs.fromPort nodes attrs.endPos]
-                         _ -> []
-        canvas = tagWithActions Canvas (canvasActions [] state.graphEditorState.dragState) <|
-                    pad 10000 <| zcat <| draggingEdge ++ [edgeXOuts, edges, nodes]
-    in tagWithActions TopLevel (topLevelActions state) <| move state.graphEditorState.pan canvas
+        draggingEdge =
+            case viewModel.editorState.mouseInteractionState of
+              Just (Dragging (DraggingEdge attrs)) ->
+                  [viewDraggingEdge attrs.fromPort nodes attrs.endPos]
+              _ -> []
+        -- TODO: tooltip
+    in draggingEdge ++ [edgeXOuts, edges, nodes]
+        |> zcat
+        |> pad 10000
+        |> tagWithActions Canvas (canvasActions [] viewModel.editorState.mouseInteractionState)
+        |> move viewModel.editorState.pan
+        |> tagWithActions TopLevel (topLevelActions viewModel.editorState.mouseInteractionState)
 -- TODO: pad 10000 is jank

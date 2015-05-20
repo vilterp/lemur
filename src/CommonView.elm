@@ -77,7 +77,7 @@ panelSection name contents =
 runLabel : (Model.RunId, Model.Run) -> String
 runLabel (runId, run) =
     "#" ++ toString runId ++ ": "
-      ++ run.userFunc.name
+      ++ run.userFuncName
       ++ (if Model.runIsDone run then " (done)" else "")
 
 -- tooltip

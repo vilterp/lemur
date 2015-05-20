@@ -4,7 +4,7 @@ import Text as T
 import Graphics.Collage as C
 import Color
 
-import Model exposing (..)
+import GraphEditor.Model exposing (..)
 
 defaultTextStyle = T.defaultStyle
 titleStyle = { defaultTextStyle | bold <- True }
@@ -22,11 +22,12 @@ nodeMiddleDivider = { defLine | dashing <- [5, 5] }
 normalPortColor = Color.yellow
 
 portStateColorCode : PortState -> Color.Color
-portStateColorCode st = case st of
-                          ValidPort -> Color.lightGreen
-                          InvalidPort -> Color.grey
-                          NormalPort -> normalPortColor
-                          TakenPort -> normalPortColor
+portStateColorCode st =
+    case st of
+      ValidPort -> Color.lightGreen
+      InvalidPort -> Color.grey
+      NormalPort -> normalPortColor
+      TakenPort -> normalPortColor
 
 lambdaNodeBgColor : LambdaState -> Color.Color
 lambdaNodeBgColor state =

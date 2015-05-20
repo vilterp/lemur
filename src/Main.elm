@@ -251,7 +251,7 @@ initState : State
 initState =
     { mod = TestData.helloMap
     , elemPanelFilter = ""
-    , collageLoc = editorLocFunc { width = 1280, 701 } -- specific to my 13" MBP :P
+    , collageLoc = editorLocFunc { width = 1280, height = 701 } -- specific to my 13" MBP :P
     , viewState =
         ViewingGraph
           { name = "main"
@@ -284,7 +284,7 @@ main : Signal Html
 main =
   S.map view state
 
-codeExecutionRequests : S.Mailbox CodeReq
+codeExecutionRequests : S.Mailbox (Maybe CodeReq)
 codeExecutionRequests = 
     S.mailbox Nothing
 
@@ -293,7 +293,7 @@ port codeExecTasks =
     codeExecutionRequests.signal
       |> S.map requestAndSend
 
-requestAndSend : CodeReq -> T.Task Http.Error ()
+requestAndSend : Maybe CodeReq -> T.Task Http.Error ()
 requestAndSend codeReq =
     case codeReq of
       Nothing -> T.succeed ()
