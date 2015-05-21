@@ -21,7 +21,7 @@ class EventLogger:
     event = {
       'msg': 'start_call',
       'ap_id': ap_id,
-      'path': self.stack + [ap_id],
+      'path': [s for s in self.stack],
       'args': tag_record(args)
     }
     self.stack.append(ap_id)
@@ -66,7 +66,7 @@ def log_call(function, ap_id, args):
 def run_main(fun, args):
   global events
   events.clear()
-  result = log_call(fun, '_start', args)
+  result = fun(**args)
 
 # for testing
 

@@ -84,4 +84,4 @@ nestedTreeUpdate apPath updateFun (CallTree tree) =
             Just subTree ->
                 CallTree tree |> nestedTreeUpdate xs updateFun
             Nothing ->
-                Debug.crash "invalid update: no such subtree"
+                Debug.crash <| "invalid update: no such subtree: " ++ x ++ " in " ++ (toString tree.children)
