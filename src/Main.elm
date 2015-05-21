@@ -7,6 +7,7 @@ import Signal as S
 import Debug
 import Dict as D
 import List as L
+import String
 import Maybe
 import Task as T
 
@@ -213,15 +214,27 @@ builtinView builtinAttrs =
     div
       [ class "builtin-editor" ]
       [ div
-          [ class "builtin-params" ]
-          [ builtinAttrs.params |> toString |> text ]
-      , div
-          [ class "builtin-return-vals" ]
-          [ builtinAttrs.returnVals |> toString |> text ]
+          [ class "builtin-func-sig" ]
+          [ text <| "def " ++ builtinAttrs.name ++ "("
+          , input
+              [ class "code-input builtin-args"
+              , type' "text"
+              , builtinAttrs.params |> String.join ", " |> value ]
+              []
+          , text "): # => {"
+          , input
+              [ class "code-input builtin-returns"
+              , type' "text"
+              , builtinAttrs.returnVals |> String.join ", " |> value ]
+              []
+          , text "}"
+          ]
       , div
           [ class "builtin-code" ]
-          [ pre
-              [ class "builtin-code-pre" ]
+          [ textarea
+              [ class "builtin-code-editor"
+              , spellcheck False
+              ]
               [ builtinAttrs.pythonCode |> text ]
           ]
       ]
