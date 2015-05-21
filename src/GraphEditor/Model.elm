@@ -158,8 +158,7 @@ type NodeStatus
 
 getNodeStatus : NodePath -> Graph -> Maybe RM.CallTree -> NodeStatus
 getNodeStatus nodePath graph maybeTree =
-    Debug.log "status"
-    (if usedAsValue nodePath graph
+    if usedAsValue nodePath graph
     then FuncUsedAsValue
     else case maybeTree of
           Nothing -> WaitingForInputs
@@ -170,7 +169,7 @@ getNodeStatus nodePath graph maybeTree =
                          , results = results
                          }
                 Nothing ->
-                    Running tree.args)
+                    Running tree.args
 
 getOutPortValue : OutPortId -> Run -> Maybe RM.Value
 getOutPortValue (nodePath, outSlotId) run =
