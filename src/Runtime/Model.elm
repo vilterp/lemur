@@ -19,82 +19,69 @@ type Value
 
 type alias ApId = String
 
-type DoneCallTree = 
-  DoneCallTree DoneCallTreeAttrs
-
 type FunctionId
   = LambdaId Int
   | NamedFuncId String -- TODO: use FuncId from Model ...
 
-type alias DoneCallTreeAttrs =
-  { apId : ApId
-  , args : Record
-  , results : Record
-  , children : List DoneCallTree
-  }
+type CallTree = 
+  CallTree CallTreeAttrs
 
--- TODO: really this should just be a list
-type RunningCallTree
-  = RunningCallTree
-      { apId : ApId
-      , args : Record
-      , doneChildren : List DoneCallTree
-      , parent : RunningCallTree
-      }
-  | RunningRoot
+type alias CallTreeAttrs =
+  { args : Record
+  , results : Maybe Record -- if nothing: active
+  , children : D.Dict ApId CallTree
+  }
 
 -- N.B.: this doesn't support parallel languages like Swift
 type ExecutionUpdate
-    = StartCall { apId : ApId, args : Record }
-    | EndCall { results : Record }
+    = StartCall
+        { fromFramePath : List ApId
+        , apId : ApId
+        , args : Record
+        }
+    | EndCall
+        { returningFramePath : List ApId
+        , results : Record
+        }
 
-pushCall : ApId -> Record -> RunningCallTree -> RunningCallTree
-pushCall apId args runningTree =
-    RunningCallTree
-      { apId = apId
-      , args = args
-      , doneChildren = []
-      , parent = runningTree
-      }
+emptyCallTree : CallTree
+emptyCallTree =
+    CallTree { args = D.empty
+             , results = Nothing
+             , children = D.empty
+             }
 
-type RunState
-  = InProgress RunningCallTree
-  | DoneRunning DoneCallTree
+isDone : CallTree -> Bool
+isDone (CallTree attrs) =
+    case attrs.results of
+      Just _ -> True
+      _ -> False
 
-popCall : Record -> RunningCallTree -> RunState
-popCall results (RunningCallTree runningTree) =
-    let doneTree =
-          DoneCallTree
-            { apId = runningTree.apId
-            , args = runningTree.args
-            , results = results
-            , children = runningTree.doneChildren
-            }
-    in case runningTree.parent of
-        RunningCallTree parent ->
-            InProgress <|
-              RunningCallTree { parent | doneChildren <- parent.doneChildren ++ [doneTree] }
-        RunningRoot ->
-            DoneRunning doneTree
+processUpdate : ExecutionUpdate -> CallTree -> CallTree
+processUpdate update tree =
+    case update of
+      StartCall startAttrs ->
+          let subTree = CallTree { args = startAttrs.args
+                                 , results = Nothing
+                                 , children = D.empty
+                                 }
+              updateFun attrs =
+                  { attrs | children <- attrs.children
+                                          |> D.insert startAttrs.apId subTree }
+          in tree |> nestedTreeUpdate startAttrs.fromFramePath updateFun
+      EndCall endAttrs ->
+          let updateFun attrs =
+                  { attrs | results <- Just endAttrs.results }
+          in tree |> nestedTreeUpdate endAttrs.returningFramePath updateFun
 
-processUpdate : ExecutionUpdate -> RunState -> RunState
-processUpdate update state =
-    case state of
-      DoneRunning _ -> Debug.crash "too many updates; already done."
-      InProgress runningTree ->
-          case update of
-            StartCall { apId, args } ->
-                runningTree |> pushCall apId args |> InProgress
-            EndCall { results } ->
-                runningTree |> popCall results
-
--- TODO: use Result instead of debug.crash... (?)
-buildTree : List ExecutionUpdate -> DoneCallTree
-buildTree updates =
-    let result = L.foldl processUpdate (InProgress RunningRoot) updates
-    in case result of
-        DoneRunning doneTree -> doneTree
-        InProgress rt ->
-            Debug.crash <| "need more done call messages. state=" ++ (toString rt) ++ " remaining=" ++ (toString updates)
-
-
+nestedTreeUpdate : List ApId -> (CallTreeAttrs -> CallTreeAttrs) -> CallTree -> CallTree
+nestedTreeUpdate apPath updateFun (CallTree tree) =
+    case apPath of
+      [] ->
+          CallTree <| updateFun tree
+      (x::xs) ->
+          case tree.children |> D.get x of
+            Just subTree ->
+                CallTree tree |> nestedTreeUpdate xs updateFun
+            Nothing ->
+                Debug.crash "invalid update: no such subtree"

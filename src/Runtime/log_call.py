@@ -2,26 +2,42 @@ import types
 import json
 import sys
 
-class EventEmitter:
+class EventLogger:
   def __init__(self):
     self.handlers = []
+    self.log = []
+    self.stack = []
   
-  def add_handler(self, handler):
-    self.handlers.append(handler)
-  
-  def fire(self, evt):
-    for handler in self.handlers:
-      handler(evt)
+  def clear(self):
+    self.stack = []
+    self.log = []
+
+  def add_event(self, evt):
+    self.log.append(evt)
+    sys.stdout.write(json.dumps(evt) + ';\n')
+    sys.stdout.flush()
+
+  def start_call(self, ap_id, args):
+    event = {
+      'msg': 'start_call',
+      'ap_id': ap_id,
+      'path': self.stack + [ap_id],
+      'args': tag_record(args)
+    }
+    self.stack.append(ap_id)
+    self.add_event(event)
+
+  def end_call(self, result):
+    event = {
+      'msg': 'end_call',
+      'results': tag_record(result),
+      'path': [s for s in self.stack]
+    }
+    self.stack.pop()
+    self.add_event(event)
 
 # the dreaded global variable
-events = EventEmitter()
-def add_to_list(evt):
-  evt_list.append(evt)
-def print_evt_as_json(evt):
-  sys.stdout.write(json.dumps(evt) + ';\n')
-  sys.stdout.flush()
-events.add_handler(add_to_list)
-events.add_handler(print_evt_as_json)
+events = EventLogger()
 
 def tag_record(val):
   return {k: tag_value(v) for k, v in val.iteritems()}
@@ -41,23 +57,16 @@ def tag_value(val):
     return {'tag': 'function'}
 
 def log_call(function, ap_id, args):
-  events.fire({
-    'msg': 'start_call',
-    'ap_id': ap_id,
-    'args': tag_record(args)
-  })
+  global events
+  events.start_call(ap_id, args)
   result = function(**args)
-  events.fire({
-    'msg': 'end_call',
-    'results': tag_record(result)
-  })
+  events.end_call(result)
   return result
 
 def run_main(fun, args):
-  global evt_list
-  evt_list = []
+  global events
+  events.clear()
   result = log_call(fun, '_start', args)
-  return (evt_list, result)
 
 # for testing
 
@@ -65,7 +74,7 @@ def log_fib(n):
   if n == 0 or n == 1:
     return {'result': 1}
   else:
-    return {'result': log_call(log_fib, 1, {'n': n-1})['result'] +\
-                        log_call(log_fib, 2, {'n': n-2})['result']}
+    return {'result': log_call(log_fib, 'ap1', {'n': n-1})['result'] +\
+                        log_call(log_fib, 'ap2', {'n': n-2})['result']}
     
 # log_call(log_fib, 0, {'n': 2})

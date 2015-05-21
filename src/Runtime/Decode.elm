@@ -14,12 +14,21 @@ updateAttrs : String -> Decoder RM.ExecutionUpdate
 updateAttrs tag =
     case tag of
       "start_call" ->
-        object2 (\apId args -> RM.StartCall { apId = apId, args = args })
-          ("ap_id" := string)
-          ("args" := record ())
+          object3 (\apId path args -> RM.StartCall
+                                          { apId = apId
+                                          , args = args
+                                          , fromFramePath = path
+                                          })
+            ("ap_id" := string)
+            ("path" := list string)
+            ("args" := record ())
       "end_call" ->
-        object1 (\results -> RM.EndCall { results = results })
-          ("results" := record ())
+          object2 (\rfp results -> RM.EndCall
+                                      { returningFramePath = rfp
+                                      , results = results
+                                      })
+            ("path" := list string)
+            ("results" := record ())
 
 record : () -> Decoder RM.Record
 record _ =

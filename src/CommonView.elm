@@ -78,7 +78,7 @@ runLabel : (Model.RunId, Model.Run) -> String
 runLabel (runId, run) =
     "#" ++ toString runId ++ ": "
       ++ run.userFuncName
-      ++ (if Model.runIsDone run then " (done)" else "")
+      ++ (if Runtime.Model.isDone run.callTree then " (done)" else "")
 
 -- tooltip
 -- maybe this should go in a diagrams-contrib library or something

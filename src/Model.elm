@@ -252,7 +252,7 @@ type alias RunId = Int
 type alias Run =
     { userFuncName : FuncName
     , mod : Module
-    , state : Runtime.Model.RunState
+    , callTree : Runtime.Model.CallTree
     }
 
 addNewRun : FuncName -> State -> State
@@ -260,7 +260,7 @@ addNewRun funcName state =
     let rid = state.nextRunId
         newRun = { userFuncName = funcName
                  , mod = state.mod
-                 , state = Runtime.Model.InProgress Runtime.Model.RunningRoot
+                 , callTree = Runtime.Model.emptyCallTree
                  }
     in { state | nextRunId <- rid + 1
                , runs <- D.insert rid newRun state.runs }
@@ -270,13 +270,7 @@ processExecutionUpdate runId update state =
     let updateFun maybeRun =
           case maybeRun of
             Just run ->
-                let newRunState = run.state |> Runtime.Model.processUpdate update
-                in Just <| { run | state <- Debug.log "NRS" newRunState }
+                let newCallTree = run.callTree |> Runtime.Model.processUpdate update
+                in Just <| { run | callTree <- Debug.log "NRS" newCallTree }
             Nothing -> Debug.crash "received update for nonexistent run"
     in { state | runs <- D.update runId updateFun state.runs }
-
-runIsDone : Run -> Bool
-runIsDone run =
-    case run.state of
-      Runtime.Model.InProgress _ -> False
-      Runtime.Model.DoneRunning _ -> True

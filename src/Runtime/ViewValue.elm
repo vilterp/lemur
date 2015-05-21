@@ -12,7 +12,7 @@ import Diagrams.Bezier exposing (..)
 import Diagrams.Layout exposing (..)
 import Diagrams.FillStroke exposing (..)
 
-import Runtime.Value exposing (..)
+import Runtime.Model exposing (..)
 
 import Text
 import Graphics.Collage as C

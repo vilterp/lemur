@@ -1,11 +1,8 @@
-module Runtime.DecodeTest where
+module Runtime.TestData where
 
 import Dict
 import List
 import Json.Decode
-import Runtime.Decode
-import Runtime.Value exposing (..)
-import Runtime.ViewValue exposing (..)
 
 import Diagrams.Core exposing (..)
 import Diagrams.Align exposing (..)
@@ -17,6 +14,9 @@ import Diagrams.Pad exposing (..)
 import Color
 
 import CommonView exposing (..)
+import Runtime.Model exposing (..)
+import Runtime.Decode
+import Runtime.ViewValue exposing (..)
 
 testVal =
   [ "{\"tag\": \"int\", \"value\": 2}"
@@ -25,7 +25,7 @@ testVal =
   , "{\"tag\": \"list\", \"value\": [{\"tag\": \"int\", \"value\": 2}, {\"tag\": \"int\", \"value\": 3}]}"
   , "{\"tag\": \"record\", \"value\": {\"foo\": {\"tag\": \"int\", \"value\": 2}, \"bar\": {\"tag\": \"int\", \"value\": 3}}}"
   ]
-  |> List.map (Json.Decode.decodeString (Runtime.Decode.taggedValue ()))
+  |> List.map (Json.Decode.decodeString (Runtime.Decode.value "int"))
 
 correctVals =
     [ (IntVal 2)
@@ -38,7 +38,7 @@ correctVals =
 correctResults = List.map Ok correctVals
 
 testUpdates =
-  "[{\"msg\": \"start_call\", \"ap_id\": 0, \"args\": {\"n\": {\"tag\": \"int\", \"value\": 2}}}, {\"msg\": \"start_call\", \"ap_id\": 1, \"args\": {\"n\": {\"tag\": \"int\", \"value\": 1}}}, {\"msg\": \"end_call\", \"results\": {\"result\": {\"tag\": \"int\", \"value\": 1}}}, {\"msg\": \"start_call\", \"ap_id\": 2, \"args\": {\"n\": {\"tag\": \"int\", \"value\": 0}}}, {\"msg\": \"end_call\", \"results\": {\"result\": {\"tag\": \"int\", \"value\": 1}}}, {\"msg\": \"end_call\", \"results\": {\"result\": {\"tag\": \"int\", \"value\": 2}}}]"
+  "[{\"msg\": \"start_call\", \"ap_id\": \"_start\", \"args\": {\"n\": {\"tag\": \"int\", \"value\": 2}}, \"path\": [\"_start\"]},{\"msg\": \"start_call\", \"ap_id\": 1, \"args\": {\"n\": {\"tag\": \"int\", \"value\": 1}}, \"path\": [\"_start\", 1]},{\"msg\": \"end_call\", \"path\": [\"_start\", 1], \"results\": {\"result\": {\"tag\": \"int\", \"value\": 1}}},{\"msg\": \"start_call\", \"ap_id\": 2, \"args\": {\"n\": {\"tag\": \"int\", \"value\": 0}}, \"path\": [\"_start\", 2]},{\"msg\": \"end_call\", \"path\": [\"_start\", 2], \"results\": {\"result\": {\"tag\": \"int\", \"value\": 1}}},{\"msg\": \"end_call\", \"path\": [\"_start\"], \"results\": {\"result\": {\"tag\": \"int\", \"value\": 2}}}]"
     |> Json.Decode.decodeString Runtime.Decode.updateList
 
 
