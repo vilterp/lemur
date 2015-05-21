@@ -42,8 +42,8 @@ modElementView addr (funcId, func) =
       , onClick addr <| Model.GraphAction <| Model.AddApNode funcId 
       ]
       [ div [ class "element-icon" ] [ elementIcon func ]
-      , div [ class "element-label" ] [ text <| Model.funcName func ]
-      , div
+      , span [ class "element-label" ] [ text <| Model.funcName func ]
+      , span
           [ class "edit-button"
           , let action = case func of
                             Model.UserFunc attrs -> Model.OpenUDF funcId

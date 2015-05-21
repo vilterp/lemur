@@ -216,6 +216,14 @@ ul.module-elements {
     padding-left: 5px;
 }
 
+.module-element-label-group {
+    float: left;
+}
+
+.edit-button {
+    float: right;
+}
+
 li.module-element {
     list-style: none;
     padding-bottom: 7px;
