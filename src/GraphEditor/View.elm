@@ -239,7 +239,7 @@ getOutPortDiagram outPortId viewModel =
           Nothing
       ViewingRunModeDenorm _ run ->
           run
-            |> getOutPortValue outPortId
+            |> getOutPortValue outPortId viewModel.currentGraph
             |> M.map Runtime.ViewValue.view
 
 viewGraph : GraphViewModel -> GEDiagram

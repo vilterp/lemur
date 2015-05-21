@@ -171,14 +171,15 @@ getNodeStatus nodePath graph maybeTree =
                 Nothing ->
                     Running tree.args
 
-getOutPortValue : OutPortId -> Run -> Maybe RM.Value
-getOutPortValue (nodePath, outSlotId) run =
+getOutPortValue : OutPortId -> Graph -> Run -> Maybe RM.Value
+getOutPortValue (nodePath, outSlotId) graph run =
     case nodePath of
       [nodeId] ->
           case outSlotId of
             FuncValueSlot ->
-                -- TODO: should be nothing if normal ports are used
-                Just RM.FunctionVal
+                if usedAsValue nodePath graph
+                then Just RM.FunctionVal
+                else Nothing
             ApResultSlot resultName ->
                 run.callTree
                   |> (\(RM.CallTree tree) -> tree.children)
