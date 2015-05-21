@@ -82,6 +82,7 @@ nestedTreeUpdate apPath updateFun (CallTree tree) =
       (x::xs) ->
           case tree.children |> D.get x of
             Just subTree ->
-                CallTree tree |> nestedTreeUpdate xs updateFun
+                CallTree { tree | children <- tree.children
+                                      |> D.insert x (subTree |> nestedTreeUpdate xs updateFun) }
             Nothing ->
                 Debug.crash <| "invalid update: no such subtree: " ++ x ++ " in " ++ (toString tree.children)

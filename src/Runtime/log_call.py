@@ -33,7 +33,8 @@ class EventLogger:
       'results': tag_record(result),
       'path': [s for s in self.stack]
     }
-    self.stack.pop()
+    if len(self.stack) > 0: # hack
+      self.stack.pop()
     self.add_event(event)
 
 # the dreaded global variable
@@ -67,6 +68,7 @@ def run_main(fun, args):
   global events
   events.clear()
   result = fun(**args)
+  events.end_call({})
 
 # for testing
 

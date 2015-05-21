@@ -9,6 +9,7 @@ import Diagrams.Wiring exposing (CollageLocation)
 
 import Model exposing (..)
 import Model.Graph exposing (..)
+import Runtime.Model as RM
 import Util exposing (..)
 
 -- TODO: having one of these for the python code editor
@@ -145,3 +146,23 @@ getApId graph =
     in ( { graph | nextApId <- aid + 1 }
        , aid
        )
+
+-- Runtime
+
+type NodeStatus
+    = WaitingForInputs
+    | Running RM.Record
+    | Done { args : RM.Record, results : RM.Record }
+
+getNodeStatus : Maybe RM.CallTree -> NodeStatus
+getNodeStatus maybeTree =
+    case maybeTree of
+      Nothing -> WaitingForInputs
+      Just (RM.CallTree tree) ->
+          case tree.results of
+            Just results ->
+                Done { args = tree.args
+                     , results = results
+                     }
+            Nothing ->
+                Running tree.args

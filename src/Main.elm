@@ -66,7 +66,9 @@ update action state =
             |> addNewRun funcName
             |> update (OpenRun <| state.nextRunId)
       ExecutionUpdate runId update ->
-          state |> processExecutionUpdate runId update
+          state
+            |> processExecutionUpdate runId update
+            |> renderState
       -- graph ops
       CanvasMouseEvt (collageLoc, primMouseEvt) ->
           -- TODO: save collage loc

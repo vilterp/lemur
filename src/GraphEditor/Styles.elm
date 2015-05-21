@@ -40,3 +40,13 @@ lambdaNodeBgColor state =
 
 apNodeBgColor = Color.lightBlue
 ifNodeBgColor = Color.lightPurple
+
+progressColorCode : NodeStatus -> Color.Color
+progressColorCode nodeStatus =
+    case nodeStatus of
+      WaitingForInputs ->
+          Color.lightGrey
+      Running _ ->
+          Color.lightYellow
+      Done _ -> 
+          Color.lightGreen

@@ -271,6 +271,6 @@ processExecutionUpdate runId update state =
           case maybeRun of
             Just run ->
                 let newCallTree = run.callTree |> Runtime.Model.processUpdate update
-                in Just <| { run | callTree <- Debug.log "NRS" newCallTree }
+                in Just <| { run | callTree <- newCallTree }
             Nothing -> Debug.crash "received update for nonexistent run"
     in { state | runs <- D.update runId updateFun state.runs }

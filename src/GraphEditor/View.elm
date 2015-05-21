@@ -25,6 +25,7 @@ import Model.Graph exposing (..)
 import GraphEditor.Model exposing (..)
 import GraphEditor.Styles exposing (..)
 import GraphEditor.Actions exposing (..)
+import Runtime.Model as RM
 import Util exposing (..)
 import CommonView
 
@@ -158,7 +159,23 @@ viewApNode funcId nodePath viewModel =
         titleRow = flexCenter (nodeTitle viewModel (func |> funcName) Color.white nodePath) funcOutPort
         params = InputGroup <| L.map ApParamSlot (func |> funcParams viewModel.mod)
         results = OutputGroup <| L.map ApResultSlot (func |> funcReturnVals viewModel.mod)
-    in nodeDiagram nodePath viewModel titleRow [params, results] apNodeBgColor -- TODO: lighter
+        -- color
+        bgColor =
+            case nodePath of
+              [nodeId] ->
+                  case viewModel.mode of
+                    EditingModeDenorm -> apNodeBgColor
+                    ViewingRunModeDenorm runId run ->
+                        if usedAsValue nodePath viewModel.currentGraph
+                        then apNodeBgColor
+                        else
+                          run.callTree
+                            |> (\(RM.CallTree tree) -> tree.children)
+                            |> D.get nodeId
+                            |> getNodeStatus
+                            |> progressColorCode
+              _ -> apNodeBgColor -- inside a lambda
+    in nodeDiagram nodePath viewModel titleRow [params, results] bgColor -- TODO: lighter
 
 viewIfNode : NodePath -> GraphViewModel -> GEDiagram
 viewIfNode nodePath viewModel =
