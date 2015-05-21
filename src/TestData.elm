@@ -60,6 +60,11 @@ helloMap =
                        , graph = testGraph
                        }
             )
+          , ("excl_and_hi"
+            , UserFunc { name = "excl_and_hi"
+                       , graph = emptyGraph
+                       }
+            )
           ]
     }
 

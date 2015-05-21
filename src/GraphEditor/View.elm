@@ -167,14 +167,11 @@ viewApNode funcId nodePath viewModel =
                   case viewModel.mode of
                     EditingModeDenorm -> apNodeBgColor
                     ViewingRunModeDenorm runId run ->
-                        if usedAsValue nodePath viewModel.currentGraph
-                        then apNodeBgColor
-                        else
-                          run.callTree
-                            |> (\(RM.CallTree tree) -> tree.children)
-                            |> D.get nodeId
-                            |> getNodeStatus
-                            |> progressColorCode
+                        run.callTree
+                          |> (\(RM.CallTree tree) -> tree.children)
+                          |> D.get nodeId
+                          |> getNodeStatus nodePath viewModel.currentGraph
+                          |> progressColorCode
               _ -> apNodeBgColor -- inside a lambda
     in nodeDiagram nodePath viewModel titleRow [params, results] bgColor -- TODO: lighter
 
@@ -235,13 +232,11 @@ viewEdgeXOut nodesDia edge =
       |> move edgeCoords.to
       |> tagWithActions XOut (edgeXOutActions edge)
 
-placeholderTTDiagram = text tooltipStyle "banana"
-
 getOutPortDiagram : OutPortId -> GraphViewModel -> Maybe (Diagram t a)
 getOutPortDiagram outPortId viewModel =
     case viewModel.mode of
       EditingModeDenorm ->
-          Just placeholderTTDiagram -- TODO: type
+          Nothing
       ViewingRunModeDenorm _ run ->
           run
             |> getOutPortValue outPortId
@@ -252,9 +247,14 @@ viewGraph viewModel =
     -- TODO: draw lambda nodes under other nodes
     let graph = viewModel.currentGraph
         --g = Debug.log "graph" graph.nodes
-        nodes = zcat <| L.map (viewPosNode viewModel []) <| D.values graph.nodes
-        edges = zcat <| L.map (viewEdge nodes) graph.edges
-        edgeXOuts = if isReadOnly viewModel then empty
+        nodes = D.values graph.nodes 
+                  |> L.map (viewPosNode viewModel [])
+                  |> zcat
+        edges = graph.edges
+                  |> L.map (viewEdge nodes)
+                  |> zcat
+        edgeXOuts = if isReadOnly viewModel
+                    then empty
                     else graph.edges
                           |> L.map (viewEdgeXOut nodes)
                           |> zcat
@@ -263,18 +263,11 @@ viewGraph viewModel =
               Just (Dragging (DraggingEdge attrs)) ->
                   [viewDraggingEdge attrs.fromPort nodes attrs.endPos]
               _ -> []
-        -- TODO: tooltip
         toolTip =
             let ttSettings = CommonView.defaultTooltipSettings
-                tt dir =
-                  placeholderTTDiagram
-                      |> CommonView.tooltip { ttSettings | direction <- dir }
             in case viewModel.editorState.mouseInteractionState of
               Just (HoveringInPort inPortId) ->
-                  Nothing
-                  --tt Right
-                  --  |> move (getInPortCoords nodes inPortId)
-                  --  |> Just
+                  Nothing -- TODO: show arg values
               Just (HoveringOutPort outPortId) ->
                   viewModel
                     |> getOutPortDiagram outPortId
@@ -286,8 +279,7 @@ viewGraph viewModel =
               _ -> Nothing
     in (maybeToList toolTip) ++ draggingEdge ++ [edgeXOuts, edges, nodes]
         |> zcat
-        |> pad 10000
+        |> pad 10000 -- TODO: hack
         |> tagWithActions Canvas (canvasActions [] viewModel.editorState.mouseInteractionState)
         |> move viewModel.editorState.pan
         |> tagWithActions TopLevel (topLevelActions viewModel.editorState.mouseInteractionState)
--- TODO: pad 10000 is jank
