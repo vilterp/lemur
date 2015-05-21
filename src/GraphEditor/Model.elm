@@ -3,6 +3,7 @@ module GraphEditor.Model where
 import Dict as D
 import List as L
 import Set
+import Maybe
 import Debug
 
 import Diagrams.Wiring exposing (CollageLocation)
@@ -166,3 +167,27 @@ getNodeStatus maybeTree =
                      }
             Nothing ->
                 Running tree.args
+
+getOutPortValue : OutPortId -> Run -> Maybe RM.Value
+getOutPortValue (nodePath, outSlotId) run =
+    case nodePath of
+      [nodeId] ->
+          case outSlotId of
+            FuncValueSlot ->
+                -- TODO: should be nothing if normal ports are used
+                Just RM.FunctionVal
+            ApResultSlot resultName ->
+                run.callTree
+                  |> (\(RM.CallTree tree) -> tree.children)
+                  |> D.get nodeId
+                  |> (\maybeCT -> Maybe.andThen maybeCT
+                      (\(RM.CallTree treeAttrs) ->
+                        -- TODO: use maybe.map or whatever
+                        case treeAttrs.results of
+                          Just results ->
+                              results
+                                |> D.get resultName
+                                |> getMaybeOrCrash "getOutPortValue: no such slot"
+                                |> Just
+                          Nothing -> Nothing))
+      _ -> Nothing

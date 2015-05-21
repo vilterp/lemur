@@ -26,6 +26,7 @@ import GraphEditor.Model exposing (..)
 import GraphEditor.Styles exposing (..)
 import GraphEditor.Actions exposing (..)
 import Runtime.Model as RM
+import Runtime.ViewValue
 import Util exposing (..)
 import CommonView
 
@@ -234,6 +235,18 @@ viewEdgeXOut nodesDia edge =
       |> move edgeCoords.to
       |> tagWithActions XOut (edgeXOutActions edge)
 
+placeholderTTDiagram = text tooltipStyle "banana"
+
+getOutPortDiagram : OutPortId -> GraphViewModel -> Maybe (Diagram t a)
+getOutPortDiagram outPortId viewModel =
+    case viewModel.mode of
+      EditingModeDenorm ->
+          Just placeholderTTDiagram -- TODO: type
+      ViewingRunModeDenorm _ run ->
+          run
+            |> getOutPortValue outPortId
+            |> M.map Runtime.ViewValue.view
+
 viewGraph : GraphViewModel -> GEDiagram
 viewGraph viewModel = 
     -- TODO: draw lambda nodes under other nodes
@@ -254,15 +267,24 @@ viewGraph viewModel =
         toolTip =
             let ttSettings = CommonView.defaultTooltipSettings
                 tt dir =
-                  text tooltipStyle "sup"
+                  placeholderTTDiagram
                       |> CommonView.tooltip { ttSettings | direction <- dir }
             in case viewModel.editorState.mouseInteractionState of
               Just (HoveringInPort inPortId) ->
-                  [ tt Right |> move (getInPortCoords nodes inPortId) ]
+                  Nothing
+                  --tt Right
+                  --  |> move (getInPortCoords nodes inPortId)
+                  --  |> Just
               Just (HoveringOutPort outPortId) ->
-                  [ tt Left |> move (getOutPortCoords nodes outPortId) ]
-              _ -> []
-    in toolTip ++ draggingEdge ++ [edgeXOuts, edges, nodes]
+                  viewModel
+                    |> getOutPortDiagram outPortId
+                    |> M.map (\dia ->
+                        dia
+                          |> CommonView.tooltip { ttSettings | direction <- Left }
+                          |> move (getOutPortCoords nodes outPortId)
+                        )
+              _ -> Nothing
+    in (maybeToList toolTip) ++ draggingEdge ++ [edgeXOuts, edges, nodes]
         |> zcat
         |> pad 10000
         |> tagWithActions Canvas (canvasActions [] viewModel.editorState.mouseInteractionState)

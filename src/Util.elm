@@ -31,3 +31,9 @@ getMaybeOrCrash msg m =
     case m of
       Just x -> x
       Nothing -> Debug.crash msg
+
+maybeToList : Maybe a -> List a
+maybeToList m =
+    case m of
+      Just x -> [x]
+      Nothing -> []

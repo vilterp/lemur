@@ -49,4 +49,4 @@ progressColorCode nodeStatus =
       Running _ ->
           Color.lightYellow
       Done _ -> 
-          Color.lightGreen
+          Color.orange
