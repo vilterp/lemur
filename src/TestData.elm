@@ -45,11 +45,11 @@ helloMap =
               )
             -- TODO: define this in terms of join;
             -- define join in terms of fold
-            , ( "newline_join"
-              , BuiltinFunc { name = "newline_join"
+            , ( "space_join"
+              , BuiltinFunc { name = "space_join"
                             , params = ["list"]
                             , returnVals = ["joinedList"]
-                            , pythonCode = "return {'joinedList': '\\n'.join(list)}"
+                            , pythonCode = "return {'joinedList': ' '.join(list)}"
                             }
               )
             ]
@@ -102,9 +102,9 @@ testGraph =
                           , id = "ap3_map"
                           , node = ApNode "Map"
                           })
-            , ("ap4_newline_join", { pos = (300, 0)
-                                   , id = "ap4_newline_join"
-                                   , node = ApNode "newline_join"
+            , ("ap4_space_join", { pos = (300, 0)
+                                   , id = "ap4_space_join"
+                                   , node = ApNode "space_join"
                                    })
             ]
     , edges =
@@ -115,7 +115,7 @@ testGraph =
           , to = (["ap3_map"], ApParamSlot "function")
           }
         , { from = (["ap3_map"], ApResultSlot "mappedList")
-          , to = (["ap4_newline_join"], ApParamSlot "list")
+          , to = (["ap4_space_join"], ApParamSlot "list")
           }
         , { from = (["lambda0", "ap1_add_excl"], ApResultSlot "added")
           , to = (["lambda0", "ap2_add_hi"], ApParamSlot "str")
