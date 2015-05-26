@@ -1,6 +1,7 @@
 import types
 import json
 import sys
+import struct
 
 class EventLogger:
   def __init__(self):
@@ -14,7 +15,9 @@ class EventLogger:
 
   def add_event(self, evt):
     self.log.append(evt)
-    sys.stdout.write(json.dumps(evt) + ';\n')
+    json_out = json.dumps(evt)
+    sys.stdout.write(struct.pack('i', len(json_out)))
+    sys.stdout.write(json_out)
     sys.stdout.flush()
 
   def start_call(self, ap_id, args):

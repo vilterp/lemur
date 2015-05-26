@@ -68,7 +68,7 @@ update action state =
       ExecutionUpdate runId update ->
           state
             |> processExecutionUpdate runId update
-            |> renderState
+            --|> renderState
       -- graph ops
       CanvasMouseEvt (collageLoc, primMouseEvt) ->
           -- TODO: save collage loc

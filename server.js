@@ -5,6 +5,8 @@ var events = require('events');
 var child_process = require('child_process');
 var tmp = require('tmp');
 var fs = require('fs-extra');
+var EventEmitter = require('events').EventEmitter;
+var util = require('util');
 // var multer = require('multer');
 
 var app = express();
@@ -50,24 +52,20 @@ app.get('/run_python', function(req, res) {
         var stderr_messages = []
 
         var python = child_process.spawn('python', [code_path]);
-        python.stdout.setEncoding('utf8');
+        // TODO: implement f*#@$ing framed protocol
+        var f_buf = new FramedBuffer();
         python.stdout.on('data', function(line) {
           console.log('python out:', line);
-          var split = line.split(';');
-          for(var i=0; i < split.length; i++) {
-            var msg = split[i].trim();
-            if(msg.length > 0) {
-              stdout_messages.push(JSON.parse(msg));
-              console.log(msg);
-              // res.write(msg);
-            }
-          }
+          f_buf.push(line);
         });
         python.stderr.setEncoding('utf8');
         python.stderr.on('data', function(data) {
           var line = data.trim();
           console.log('python err:', line);
           stderr_messages.push(line);
+        });
+        f_buf.on('message', function(msg) {
+          stdout_messages.push(JSON.parse(msg));
         });
 
         python.on('close', function(code, signal) {
@@ -90,6 +88,37 @@ app.get('/run_python', function(req, res) {
   });
 
 });
+
+// TODO: this must be in a package somewhere...
+function FramedBuffer() {
+  this.buffer = '';
+  this.state = 'beginning';
+  this.length_left = 0;
+  return this;
+}
+util.inherits(FramedBuffer, EventEmitter);
+
+FramedBuffer.prototype.push = function(buf) {
+  if(buf.length == 0) {
+    return;
+  }
+  if(this.state === 'beginning') {
+    var length = buf.readInt32LE();
+    this.length_left = length;
+    buf = buf.slice(4);
+    this.state = 'reading';
+  }
+  var chunk_length = Math.min(this.length_left, buf.length);
+  var this_chunk = buf.toString('utf8', 0, chunk_length);
+  this.buffer += this_chunk;
+  this.length_left -= chunk_length;
+  if(this.length_left === 0) {
+    this.state = 'beginning';
+    this.emit('message', this.buffer);
+    this.buffer = '';
+    this.push(buf.slice(chunk_length));
+  }
+}
 
 // start it up
 app.listen(3000, function() {

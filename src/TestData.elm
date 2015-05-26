@@ -140,6 +140,11 @@ helloMap =
                        , graph = emptyGraph
                        }
             )
+          , ("word_count_test"
+            , UserFunc { name = "word_count_test"
+                       , graph = emptyGraph
+                       }
+            )
           ]
     }
 
