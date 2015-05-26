@@ -108,11 +108,11 @@ helloMap =
                             , pythonCode = "results = {}\narg_names = combiner.func_code.co_varnames[0:2]\ndef combiner_wrapper(state, item):\n  result = log_call(combiner, 'reduce_by_key_internal', {arg_names[0]: state, arg_names[1]: item})\n  return result.values()[0]\nfor key, value in items:\n  if key not in results:\n    results[key] = initial\n  results[key] = combiner_wrapper(results[key], value)\nreturn {'results': results}"
                             }
               )
-            , ("Moby_Dick_url"
-              , BuiltinFunc { name = "Moby_Dick_url"
+            , ("gettysburg_url"
+              , BuiltinFunc { name = "gettysburg_url"
                             , params = []
                             , returnVals = ["url"]
-                            , pythonCode = "return {'url': 'https://gist.githubusercontent.com/vilterp/26d34dd9428d79efef7d/raw/cb39d2d14c66be1ab0748de597f98d4f04abde7e/gistfile1.txt'}"
+                            , pythonCode = "return {'url': 'https://gist.githubusercontent.com/vilterp/d81dba5421069e9c4ac4/raw/751a80c01676614b0323e36777164131aaaf4596/gettysburg.txt'}"
                             }
               )
             , ("HTTP_get"
