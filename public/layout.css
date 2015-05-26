@@ -75,7 +75,7 @@ body {
     background-color: #e8e8e8;
 }
 
-#right {
+/*#right {
     right: 0;
     width: 250px;
     top: 70px;
@@ -84,11 +84,11 @@ body {
     border-left: solid black 1px;
     overflow: hidden;
     background-color: #e8e8e8;
-}
+}*/
 
 #center {
     left: 251px;
-    right: 250px;
+    right: 0px;
     top: 70px;
     bottom: 0;
     position: absolute;

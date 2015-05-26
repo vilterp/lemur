@@ -42,8 +42,8 @@ icon bgColor letterColor letter =
     (DC.text { defaultStyle | color <- letterColor } (String.fromChar letter))
       `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid bgColor)
 
-udfIcon = icon Color.lightBlue Color.black 'U'
-builtinIcon = icon Color.yellow Color.black 'B'
+udfIcon = icon Color.lightBlue Color.black 'G' -- graph
+builtinIcon = icon Color.yellow Color.black 'T' -- text
 runIcon = icon Color.brown Color.white 'R'
 
 elementIcon : Model.Func -> Html
