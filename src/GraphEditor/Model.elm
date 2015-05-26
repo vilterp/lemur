@@ -39,25 +39,26 @@ makeViewModel : State -> GraphViewModel
 makeViewModel state =
     case state.viewState of
       ViewingGraph attrs ->
-          { mod =
-              case attrs.mode of
-                EditingMode -> state.mod
-                ViewingRunMode runId ->
-                    state |> getRunOrCrash runId |> .mod
-          , currentName = attrs.name
-          , currentGraph =
-                state.mod.userFuncs
-                  |> D.get attrs.name
-                  |> getMaybeOrCrash "no such user func"
-                  |> (\(UserFunc attrs) -> attrs.graph)
-          , collageLoc = state.collageLoc
-          , editorState = attrs.editorState
-          , mode =
-              case attrs.mode of
-                EditingMode -> EditingModeDenorm
-                ViewingRunMode runId ->
-                    ViewingRunModeDenorm runId (getRunOrCrash runId state)
-          }
+          let mod =
+                case attrs.mode of
+                  EditingMode -> state.mod
+                  ViewingRunMode runId ->
+                      state |> getRunOrCrash runId |> .mod
+          in  { mod = mod
+              , currentName = attrs.name
+              , currentGraph =
+                    mod.userFuncs
+                      |> D.get attrs.name
+                      |> getMaybeOrCrash "no such user func"
+                      |> (\(UserFunc attrs) -> attrs.graph)
+              , collageLoc = state.collageLoc
+              , editorState = attrs.editorState
+              , mode =
+                  case attrs.mode of
+                    EditingMode -> EditingModeDenorm
+                    ViewingRunMode runId ->
+                        ViewingRunModeDenorm runId (getRunOrCrash runId state)
+              }
       EditingBuiltin _ -> Debug.crash "expecting graph viewing state"
 
 type PortState

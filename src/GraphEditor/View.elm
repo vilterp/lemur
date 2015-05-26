@@ -247,7 +247,7 @@ viewGraph viewModel =
     -- TODO: draw lambda nodes under other nodes
     let graph = viewModel.currentGraph
         --g = Debug.log "graph" graph.nodes
-        nodes = D.values graph.nodes 
+        nodes = D.values graph.nodes
                   |> L.map (viewPosNode viewModel [])
                   |> zcat
         edges = graph.edges

@@ -110,20 +110,31 @@ nodeToStmt mod graph (nodePath, node) =
           -- TODO: factor out common stuff w/ userFuncToAst
           let subGraph =
                 { nodes = attrs.nodes
-                , edges = graph.edges
+                , edges = Debug.log "subgraphEdges" (graph.edges
+                                            |> L.filter (\{from, to} -> (fst from `startsWith` nodePath) && (fst to `startsWith` nodePath))
+                                            |> L.map (localizeEdge nodePath))
                 , nextLambdaId = 0
                 , nextApId = 0
                 }
+              withNormalEdges = { subGraph | edges <- graph.edges }
               bodyStmts = topSort subGraph
                             |> L.map (\(path, node) -> (nodePath ++ path, node))
-                            |> L.concatMap (nodeToStmt mod subGraph)
-              returnStmt = makeReturnStmt mod subGraph nodePath
+                            |> L.concatMap (nodeToStmt mod withNormalEdges)
+              returnStmt = makeReturnStmt mod withNormalEdges nodePath
           in [ AST.FuncDef { name = S.join "_" nodePath
-                           , args = freeInPorts mod subGraph nodePath
+                           , args = freeInPorts mod withNormalEdges nodePath
                                       |> L.map inPortToString
                            , body = bodyStmts ++ [returnStmt]
                            }
              ]
+
+localizeEdge : NodePath -> Edge -> Edge
+localizeEdge initPath edge =
+    let localizePath path = path |> L.drop (L.length initPath)
+        localizePortId (path, id) = (localizePath path, id)
+    in { from = localizePortId edge.from
+       , to = localizePortId edge.to
+       }
 
 makeReturnStmt : Module -> Graph -> NodePath -> AST.Statement
 makeReturnStmt mod graph nodePath =

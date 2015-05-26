@@ -45,11 +45,81 @@ helloMap =
               )
             -- TODO: define this in terms of join;
             -- define join in terms of fold
-            , ( "space_join"
-              , BuiltinFunc { name = "space_join"
-                            , params = ["list"]
+            , ( "join"
+              , BuiltinFunc { name = "join"
+                            , params = ["joiner", "list"]
                             , returnVals = ["joinedList"]
-                            , pythonCode = "return {'joinedList': ' '.join(list)}"
+                            , pythonCode = "return {'joinedList': joiner.join(list)}"
+                            }
+              )
+            , ( "Zero" 
+              , BuiltinFunc { name = "Zero"
+                            , params = []
+                            , returnVals = ["num"]
+                            , pythonCode = "return {'num': 0}"
+                            }
+              )
+            , ( "One" 
+              , BuiltinFunc { name = "One"
+                            , params = []
+                            , returnVals = ["num"]
+                            , pythonCode = "return {'num': 1}"
+                            }
+              )
+            , ( "Space" 
+              , BuiltinFunc { name = "Space"
+                            , params = []
+                            , returnVals = ["space"]
+                            , pythonCode = "return {'space': ' '}"
+                            }
+              )
+            , ( "Plus" 
+              , BuiltinFunc { name = "Plus"
+                            , params = ["a", "b"]
+                            , returnVals = ["res"]
+                            , pythonCode = "return {'res': a + b}"
+                            }
+              )
+            , ( "Tup2" 
+              , BuiltinFunc { name = "Tup2"
+                            , params = ["first", "second"]
+                            , returnVals = ["tup"]
+                            , pythonCode = "return {'tup': [first, second]}"
+                            }
+              )
+            , ( "Split_on_Whitespace" 
+              , BuiltinFunc { name = "Split_on_Whitespace"
+                            , params = ["str"]
+                            , returnVals = ["split"]
+                            , pythonCode = "import re\nreturn {'split': re.split(r'\\s', str)}"
+                            }
+              )
+            , ( "Concatenate" 
+              , BuiltinFunc { name = "Concatenate"
+                            , params = ["lists"]
+                            , returnVals = ["result"]
+                            , pythonCode = "return {'result': [x for x in l for l in lists]}"
+                            }
+              )
+            , ( "Reduce_by_Key" 
+              , BuiltinFunc { name = "Reduce_by_Key"
+                            , params = ["combiner", "initial", "items"]
+                            , returnVals = ["results"]
+                            , pythonCode = "results = {}\narg_names = combiner.func_code.co_varnames[0:2]\ndef combiner_wrapper(state, item):\n  result = log_call(combiner, 'reduce_by_key_internal', {arg_names[0]: state, arg_names[1]: item})\n  return result.values()[0]\nfor key, value in items:\n  if key not in results:\n    results[key] = initial\n  results[key] = combiner_wrapper(results[key], value)\nreturn {'results': results}"
+                            }
+              )
+            , ("Moby_Dick_url"
+              , BuiltinFunc { name = "Moby_Dick_url"
+                            , params = []
+                            , returnVals = ["url"]
+                            , pythonCode = "return {'url': 'https://gist.githubusercontent.com/vilterp/26d34dd9428d79efef7d/raw/cb39d2d14c66be1ab0748de597f98d4f04abde7e/gistfile1.txt'}"
+                            }
+              )
+            , ("HTTP_get"
+              , BuiltinFunc { name = "HTTP_get"
+                            , params = ["url"]
+                            , returnVals = ["response_text"]
+                            , pythonCode = "import requests\nreturn {'response_text': requests.get(url).text}"
                             }
               )
             ]
@@ -62,6 +132,11 @@ helloMap =
             )
           , ("excl_and_hi"
             , UserFunc { name = "excl_and_hi"
+                       , graph = emptyGraph
+                       }
+            )
+          , ("word_count"
+            , UserFunc { name = "word_count"
                        , graph = emptyGraph
                        }
             )
@@ -102,9 +177,9 @@ testGraph =
                           , id = "ap3_map"
                           , node = ApNode "Map"
                           })
-            , ("ap4_space_join", { pos = (300, 0)
-                                   , id = "ap4_space_join"
-                                   , node = ApNode "space_join"
+            , ("ap4_join", { pos = (300, 0)
+                                   , id = "ap4_join"
+                                   , node = ApNode "join"
                                    })
             ]
     , edges =
@@ -115,7 +190,7 @@ testGraph =
           , to = (["ap3_map"], ApParamSlot "function")
           }
         , { from = (["ap3_map"], ApResultSlot "mappedList")
-          , to = (["ap4_space_join"], ApParamSlot "list")
+          , to = (["ap4_join"], ApParamSlot "list")
           }
         , { from = (["lambda0", "ap1_add_excl"], ApResultSlot "added")
           , to = (["lambda0", "ap2_add_hi"], ApParamSlot "str")
