@@ -3,6 +3,8 @@ all:
 
 deps:
 	elm package install --yes
+	git submodule init
+	git submodule update
 	npm install
 
 loc:

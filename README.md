@@ -1,4 +1,4 @@
-# thesis (cool name TBD)
+# Lemur
 
 My senior thesis in CS at the University of Chicago, advised by Borja Sotomayor and (unofficially) Ravi Chugh and Mike Wilde (CI/Argonne). Paper coming soon.
 
@@ -17,6 +17,7 @@ In root directory:
 3. `$ node server.js`
 3. Open browser to [http://localhost:3000/](http://localhost:3000/)
 
-## Descriptive Talk Slides
+## More Info
 
-(with screenshots): [here](https://docs.google.com/presentation/d/19oM5iH6eHpxGSPq8d3NrCeqqdNWBx45QPAPJh2bOt80/edit?usp=sharing)
+- [Talk Slides](https://docs.google.com/presentation/d/19oM5iH6eHpxGSPq8d3NrCeqqdNWBx45QPAPJh2bOt80/edit?usp=sharing) (incl. screenshots)
+- 

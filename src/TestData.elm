@@ -36,6 +36,13 @@ helloMap =
                             , pythonCode = "return {'added':str + '!'}"
                             }
               )
+            , ( "length"
+              , BuiltinFunc { name = "length"
+                            , params = ["str"]
+                            , returnVals = ["length"]
+                            , pythonCode = "return {'length':len(str)}"
+                            }
+              )
             , ( "add_hi"
               , BuiltinFunc { name = "add_hi"
                             , params = ["str"]

@@ -151,7 +151,7 @@ topSection : Html
 topSection =
     div
       [ id "top" ]
-      [ div [ id "logo" ] [ text "VisualFP" ]
+      [ div [ id "logo" ] [ text "Lemur" ]
       -- TODO: breadcrumbs
       , div [ id "user-state" ]
           [ div [ id "prof-pic" ] [ text "PV" ]
