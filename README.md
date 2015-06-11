@@ -19,5 +19,5 @@ In root directory:
 
 ## More Info
 
+- [Paper](https://docs.google.com/document/d/1Sd0RF3Ul2nyFs834MJ5BP1SrVGSguKXNKusAHMhyBL8/edit#heading=h.yancnoidrolk) (background, related work, explanation of key data structures & algos w/ source links, etc)
 - [Talk Slides](https://docs.google.com/presentation/d/19oM5iH6eHpxGSPq8d3NrCeqqdNWBx45QPAPJh2bOt80/edit?usp=sharing) (incl. screenshots)
-- 
