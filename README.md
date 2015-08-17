@@ -16,6 +16,14 @@ My senior thesis in CS at the University of Chicago, advised by Borja Sotomayor 
 
 ## How to run
 
+### With Docker
+
+```
+$ docker run -p 3000:3000 vilterp/lemur
+```
+
+### By Hand
+
 In root directory:
 
 1. `$ make deps` (installs Elm and Node packages)
