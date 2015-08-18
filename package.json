@@ -1,11 +1,11 @@
 {
-  "name": "thesis",
+  "name": "lemur",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vilterp/thesis.git"
+    "url": "https://github.com/vilterp/lemur.git"
   },
   "version": "0.0.0",
-  "description": "Swift + Galaxy",
+  "description": "visual functional programming language",
   "dependencies": {
     "body-parser": "^1.12.4",
     "express": "^4.12.3",
