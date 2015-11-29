@@ -4,7 +4,7 @@ RUN npm install -g elm
 
 ADD . lemur
 WORKDIR lemur
-RUN make deps && make
+RUN make clean && make deps && make
 
 EXPOSE 3000
 

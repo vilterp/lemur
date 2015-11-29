@@ -12,7 +12,7 @@ My senior thesis in CS at the University of Chicago, advised by Borja Sotomayor.
 
 ## Requires
 
-1. Elm 0.15 (elm-lang.org)
+1. Elm 0.16 (elm-lang.org)
 2. Node.js 0.12
 3. Python 2.7
 
