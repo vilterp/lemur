@@ -29,7 +29,7 @@ app.get('/', function(req, res) {
 	res.sendFile('public/index.html');
 });
 
-app.get('/run_python', function(req, res) {
+app.post('/run_python', function(req, res) {
 
   tmp.dir(function(err, path, cleanupCallback) {
     if (err) throw err;
@@ -41,7 +41,7 @@ app.get('/run_python', function(req, res) {
     fs.copy('src/Runtime/log_call.py', log_call_path, function (err) {
       if (err) return console.error(err)
       
-      var code = req.param('code');
+      var code = req.body.code;
 
       console.log('CODE:', code);
 

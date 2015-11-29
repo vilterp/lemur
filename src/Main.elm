@@ -7,6 +7,7 @@ import List as L
 import String
 import Maybe
 import Task as T
+import Json.Encode as JsEnc
 
 import Diagrams.Core as DC
 import Diagrams.Geom as DG
@@ -393,12 +394,22 @@ port tasks =
 
 runCode : CodeReq -> T.Task Http.Error Action
 runCode codeReq =
-    (Http.url
-      "/run_python"
-      [("code", Codegen.moduleToPython codeReq.mainName codeReq.mod)])
-      |> Http.get Runtime.Decode.updateList
-      |> T.map (\updates -> ExecutionUpdates codeReq.runId updates)
+  let
+    code =
+      Codegen.moduleToPython codeReq.mainName codeReq.mod
 
-bodyFromCode : String -> Http.Body
-bodyFromCode code =
-    Http.string code
+    body =
+      Http.string <|
+        JsEnc.encode
+          0
+          (JsEnc.object [("code", JsEnc.string code)])
+  in
+    (Http.send
+      Http.defaultSettings
+      { verb = "POST"
+      , headers = [("Content-Type", "application/json")]
+      , url = "/run_python"
+      , body = body
+      })
+    |> Http.fromJson Runtime.Decode.updateList
+    |> T.map (\updates -> ExecutionUpdates codeReq.runId updates)
