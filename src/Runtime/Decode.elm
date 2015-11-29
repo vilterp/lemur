@@ -12,23 +12,26 @@ update =
 
 updateAttrs : String -> Decoder RM.ExecutionUpdate
 updateAttrs tag =
-    case tag of
-      "start_call" ->
-          object3 (\apId path args -> RM.StartCall
-                                          { apId = apId
-                                          , args = args
-                                          , fromFramePath = path
-                                          })
-            ("ap_id" := string)
-            ("path" := list string)
-            ("args" := record ())
-      "end_call" ->
-          object2 (\rfp results -> RM.EndCall
-                                      { returningFramePath = rfp
-                                      , results = results
-                                      })
-            ("path" := list string)
-            ("results" := record ())
+  case tag of
+    "start_call" ->
+        object3 (\apId path args -> RM.StartCall
+                                        { apId = apId
+                                        , args = args
+                                        , fromFramePath = path
+                                        })
+          ("ap_id" := string)
+          ("path" := list string)
+          ("args" := record ())
+    "end_call" ->
+        object2 (\rfp results -> RM.EndCall
+                                    { returningFramePath = rfp
+                                    , results = results
+                                    })
+          ("path" := list string)
+          ("results" := record ())
+
+    _ ->
+      Debug.crash "unexpected tag"
 
 record : () -> Decoder RM.Record
 record _ =
@@ -42,12 +45,15 @@ taggedValue _ =
 
 value : String -> Decoder RM.Value
 value tag =
-    let getVal constructor decoder =
-          object1 constructor ("value" := decoder)
-    in case tag of
-        "int" -> getVal RM.IntVal int
-        "string" -> getVal RM.StringVal string
-        "list" -> getVal RM.ListVal <| list (taggedValue ())
-        "record" -> getVal RM.RecordVal <| record ()
-        "file" -> getVal RM.FileVal <| string
-        "function" -> succeed RM.FunctionVal
+  let
+    getVal constructor decoder =
+      object1 constructor ("value" := decoder)
+  in
+    case tag of
+      "int" -> getVal RM.IntVal int
+      "string" -> getVal RM.StringVal string
+      "list" -> getVal RM.ListVal <| list (taggedValue ())
+      "record" -> getVal RM.RecordVal <| record ()
+      "file" -> getVal RM.FileVal <| string
+      "function" -> succeed RM.FunctionVal
+      _ -> Debug.crash "unexpected tag"

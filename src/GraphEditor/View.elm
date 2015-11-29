@@ -35,7 +35,7 @@ type alias GEDiagram = Diagram Tag GraphEditorAction
 -- common elements
 xGlyph : Color.Color -> Maybe Color.Color -> GEDiagram
 xGlyph lineColor bgColor =
-  let smallLine = vline 11 { defLine | color <- lineColor, width <- 2 }
+  let smallLine = vline 11 { defLine | color = lineColor, width = 2 }
       rotLeft = rotate (-pi/4) smallLine
       rotRight = rotate (pi/4) smallLine
       -- TODO: get with alpha to work (?)
@@ -273,7 +273,7 @@ viewGraph viewModel =
                     |> getOutPortDiagram outPortId
                     |> M.map (\dia ->
                         dia
-                          |> CommonView.tooltip { ttSettings | direction <- Left }
+                          |> CommonView.tooltip { ttSettings | direction = Left }
                           |> move (getOutPortCoords nodes outPortId)
                         )
               _ -> Nothing

@@ -39,7 +39,7 @@ scrollPanel header_elems child_elems =
 
 icon : Color.Color -> Color.Color -> Char -> DC.Diagram t a
 icon bgColor letterColor letter =
-    (DC.text { defaultStyle | color <- letterColor } (String.fromChar letter))
+    (DC.text { defaultStyle | color = letterColor } (String.fromChar letter))
       `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid bgColor)
 
 udfIcon = icon Color.lightBlue Color.black 'G' -- graph

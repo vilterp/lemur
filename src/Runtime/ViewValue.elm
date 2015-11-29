@@ -57,21 +57,21 @@ viewKeyValue (key, value) =
 
 defaultTextStyle =
     let defStyle = Text.defaultStyle
-    in { defStyle | color <- Color.white }
+    in { defStyle | color = Color.white }
 
-intTextStyle = { defaultTextStyle | color <- Color.lightBlue }
+intTextStyle = { defaultTextStyle | color = Color.lightBlue }
 
-strTextStyle = { defaultTextStyle | color <- Color.green }
+strTextStyle = { defaultTextStyle | color = Color.green }
 strFillStroke = justFill (Solid Color.green)
 
 defaultLineStyle =
     let defStyle = C.defaultLine
-    in { defStyle | color <- Color.white }
+    in { defStyle | color = Color.white }
 
 listRuleStyle = defaultLineStyle
 listFillStroke = justStroke defaultLineStyle
 
-fileTextStyle = { defaultTextStyle | color <- Color.red }
+fileTextStyle = { defaultTextStyle | color = Color.red }
 
 functionTextStyle = defaultTextStyle
 

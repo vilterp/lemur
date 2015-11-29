@@ -55,7 +55,9 @@ runSection state =
           let graph = state.mod.userFuncs
                         |> D.get attrs.name
                         |> getMaybeOrCrash "no such user func"
-                        |> (\(UserFunc attrs) -> attrs.graph)
+                        |> (\func -> case func of
+                              UserFunc attrs -> attrs.graph
+                              _ -> Debug.crash "only expected user funcs here")
           in case attrs.mode of
             EditingMode ->
                 case freeInPorts state.mod graph [] of

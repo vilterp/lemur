@@ -44,18 +44,18 @@ update action state =
       NoOp -> state
       -- editor stuff
       FilterElemPanel filter ->
-          { state | elemPanelFilter <- filter }
+          { state | elemPanelFilter = filter }
       OpenUDF funcName ->
-          { state | viewState <- ViewingGraph { name = funcName
+          { state | viewState = ViewingGraph { name = funcName
                                               , editorState = GE.initState
                                               , mode = EditingMode
                                               } }
               |> renderState
       OpenBuiltin funcName ->
-          { state | viewState <- EditingBuiltin { name = funcName } }
+          { state | viewState = EditingBuiltin { name = funcName } }
       OpenRun runId ->
           let run = state |> getRunOrCrash runId
-          in { state | viewState <- ViewingGraph { name = run.userFuncName
+          in { state | viewState = ViewingGraph { name = run.userFuncName
                                                  , editorState = GE.initState
                                                  , mode = ViewingRunMode runId
                                                  } }
@@ -74,7 +74,7 @@ update action state =
           -- TODO: save collage loc
           case state.viewState of
             ViewingGraph graphViewAttrs ->
-                let clState = { state | collageLoc <- collageLoc }
+                let clState = { state | collageLoc = collageLoc }
                     (newMS, actions) =
                         DI.processMouseEvent 
                             graphViewAttrs.editorState.diagram
@@ -92,10 +92,10 @@ update action state =
                           |> GE.render
                     newEditorState = newViewModel.editorState
                     mis = newEditorState.mouseInteractionState
-                in { clState | mod <- newViewModel.mod
-                             , viewState <- ViewingGraph
-                                  { graphViewAttrs | editorState <-
-                                                        { newEditorState | mouseState <- newMS } } }
+                in { clState | mod = newViewModel.mod
+                             , viewState = ViewingGraph
+                                  { graphViewAttrs | editorState =
+                                                        { newEditorState | mouseState = newMS } } }
             EditingBuiltin _ ->
                 let l = Debug.log "canvas action while editing builtin" ()
                 in state
@@ -109,9 +109,9 @@ update action state =
                       let newViewModel =
                               GE.updateGraph graphAction (makeViewModel state)
                                 |> GE.render
-                          newViewAttrs = { graphViewAttrs | editorState <- newViewModel.editorState }
-                      in { state | viewState <- ViewingGraph newViewAttrs
-                                 , mod <- newViewModel.mod }
+                          newViewAttrs = { graphViewAttrs | editorState = newViewModel.editorState }
+                      in { state | viewState = ViewingGraph newViewAttrs
+                                 , mod = newViewModel.mod }
                   ViewingRunMode _ ->
                     let l = Debug.log "graph action while viewing run" ()
                     in state
@@ -126,7 +126,7 @@ renderState state =
     case state.viewState of
       ViewingGraph attrs ->
           let vm = makeViewModel state |> GE.render
-          in { state | viewState <- ViewingGraph { attrs | editorState <- vm.editorState } }
+          in { state | viewState = ViewingGraph { attrs | editorState = vm.editorState } }
       EditingBuiltin _ ->
           Debug.crash "unexpected usage of renderState"
 
@@ -190,7 +190,10 @@ centerSection state =
                 , state.mod.builtinFuncs
                     |> D.get attrs.name
                     |> getMaybeOrCrash "no such builtin function"
-                    |> (\(BuiltinFunc attrs) -> builtinView attrs)
+                    |> (\func ->
+                          case func of
+                            BuiltinFunc attrs -> builtinView attrs
+                            _ -> Debug.crash "only expecting builtin funcs here")
                 )
     in div
       [ id "center" ]

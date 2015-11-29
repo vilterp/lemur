@@ -50,7 +50,10 @@ makeViewModel state =
                     mod.userFuncs
                       |> D.get attrs.name
                       |> getMaybeOrCrash "no such user func"
-                      |> (\(UserFunc attrs) -> attrs.graph)
+                      |> (\func ->
+                        case func of
+                          UserFunc attrs -> attrs.graph
+                          _ -> Debug.crash "only expected UserFuncs")
               , collageLoc = state.collageLoc
               , editorState = attrs.editorState
               , mode =
@@ -75,36 +78,45 @@ type LambdaState
 -- TODO(perf): these are same for duration of drag. could save somewhere.
 inPortState : GraphViewModel -> InPortId -> PortState
 inPortState viewModel (thisNodePath, slotId) =
-    if funcOutPortUsed viewModel.currentGraph thisNodePath
-    then InvalidPort
-    else case viewModel.editorState.mouseInteractionState of
-            Just (Dragging (DraggingEdge attrs)) ->
-                let (fromNodePath, _) = attrs.fromPort
-                in if -- dragging from this node
-                      | thisNodePath `startsWith` fromNodePath -> InvalidPort
-                      -- this node already taken
-                      | inPortTaken viewModel.currentGraph (thisNodePath, slotId) -> TakenPort
-                      -- no cycles
-                      | thisNodePath `Set.member` attrs.upstreamNodes -> InvalidPort
-                      | L.any (\unPath -> thisNodePath `startsWith` unPath) (Set.toList <| attrs.upstreamNodes) -> InvalidPort
-                      -- can't go from in lambda to out
-                      | goingUpTree fromNodePath thisNodePath -> InvalidPort
-                      -- TODO: wrong type!
-                      | otherwise -> ValidPort
-            _ -> NormalPort
+    if funcOutPortUsed viewModel.currentGraph thisNodePath then
+      InvalidPort
+    else
+      case viewModel.editorState.mouseInteractionState of
+        Just (Dragging (DraggingEdge attrs)) ->
+            let (fromNodePath, _) = attrs.fromPort
+            in
+              if thisNodePath `startsWith` fromNodePath then
+                -- dragging from this node
+                InvalidPort
+              else if inPortTaken viewModel.currentGraph (thisNodePath, slotId) then
+                -- this node already taken
+                TakenPort
+              else if thisNodePath `Set.member` attrs.upstreamNodes then
+                -- no cycles
+                InvalidPort
+              else if L.any (\unPath -> thisNodePath `startsWith` unPath) (Set.toList <| attrs.upstreamNodes) then
+                -- can't go from in lambda to out
+                InvalidPort
+              else if goingUpTree fromNodePath thisNodePath then
+                InvalidPort
+              else
+                -- TODO: wrong type!
+                ValidPort
+        _ -> NormalPort
 
 -- TODO: highlight as valid when you mouse over an in port of same type
 outPortState : GraphViewModel -> OutPortId -> PortState
 outPortState viewModel (nodePath, slotId) =
-    if | funcOutPortUsed viewModel.currentGraph nodePath ->
-            case slotId of
-              FuncValueSlot -> NormalPort
-              _ -> InvalidPort
-       | anyNormalPortsUsed viewModel.currentGraph nodePath ->
-            case slotId of
-              FuncValueSlot -> InvalidPort
-              _ -> NormalPort
-       | otherwise -> NormalPort
+    if funcOutPortUsed viewModel.currentGraph nodePath then
+      case slotId of
+        FuncValueSlot -> NormalPort
+        _ -> InvalidPort
+    else if anyNormalPortsUsed viewModel.currentGraph nodePath then
+      case slotId of
+        FuncValueSlot -> InvalidPort
+        _ -> NormalPort
+    else
+      NormalPort
 
 -- TODO: use these in other queries
 lambdaState : GraphViewModel -> NodePath -> LambdaState
@@ -131,21 +143,21 @@ updateGraphFun updateFun viewModel =
             viewModel.mod.userFuncs
               |> D.insert viewModel.currentName newUdf
         currentMod = viewModel.mod
-        newModule = { currentMod | userFuncs <- newUserFuncs }
-    in { viewModel | currentGraph <- newGraph
-                   , mod <- newModule }
+        newModule = { currentMod | userFuncs = newUserFuncs }
+    in { viewModel | currentGraph = newGraph
+                   , mod = newModule }
 
 getLambdaId : Graph -> (Graph, Int)
 getLambdaId graph =
     let lid = graph.nextLambdaId
-    in ( { graph | nextLambdaId <- lid + 1 }
+    in ( { graph | nextLambdaId = lid + 1 }
        , lid
        )
 
 getApId : Graph -> (Graph, Int)
 getApId graph =
     let aid = graph.nextApId
-    in ( { graph | nextApId <- aid + 1 }
+    in ( { graph | nextApId = aid + 1 }
        , aid
        )
 
@@ -195,4 +207,7 @@ getOutPortValue (nodePath, outSlotId) graph run =
                                 |> getMaybeOrCrash "getOutPortValue: no such slot"
                                 |> Just
                           Nothing -> Nothing))
+            IfResultSlot ->
+              Debug.crash "TODO: probably make Ifs a function, not a special case node..."
+
       _ -> Nothing

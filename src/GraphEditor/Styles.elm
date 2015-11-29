@@ -7,19 +7,19 @@ import Color
 import GraphEditor.Model exposing (..)
 
 defaultTextStyle = T.defaultStyle
-titleStyle = { defaultTextStyle | bold <- True }
+titleStyle = { defaultTextStyle | bold = True }
 slotLabelStyle = defaultTextStyle
 
-tooltipStyle = { defaultTextStyle | color <- Color.white }
+tooltipStyle = { defaultTextStyle | color = Color.white }
 
 defaultLineStyle = C.defaultLine
 
-edgeStyle = { defaultLineStyle | width <- 3 }
+edgeStyle = { defaultLineStyle | width = 3 }
 
 defLine = C.defaultLine
 
 nodeTopDivider = defLine
-nodeMiddleDivider = { defLine | dashing <- [5, 5] }
+nodeMiddleDivider = { defLine | dashing = [5, 5] }
 
 normalPortColor = Color.yellow
 

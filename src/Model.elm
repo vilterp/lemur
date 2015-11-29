@@ -262,8 +262,8 @@ addNewRun funcName state =
                  , mod = state.mod
                  , callTree = Runtime.Model.emptyCallTree
                  }
-    in { state | nextRunId <- rid + 1
-               , runs <- D.insert rid newRun state.runs }
+    in { state | nextRunId = rid + 1
+               , runs = D.insert rid newRun state.runs }
 
 processExecutionUpdate : RunId -> Runtime.Model.ExecutionUpdate -> State -> State
 processExecutionUpdate runId update state =
@@ -271,6 +271,6 @@ processExecutionUpdate runId update state =
           case maybeRun of
             Just run ->
                 let newCallTree = run.callTree |> Runtime.Model.processUpdate update
-                in Just <| { run | callTree <- newCallTree }
+                in Just <| { run | callTree = newCallTree }
             Nothing -> Debug.crash "received update for nonexistent run"
-    in { state | runs <- D.update runId updateFun state.runs }
+    in { state | runs = D.update runId updateFun state.runs }

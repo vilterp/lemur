@@ -116,7 +116,7 @@ nodeToStmt mod graph (nodePath, node) =
                 , nextLambdaId = 0
                 , nextApId = 0
                 }
-              withNormalEdges = { subGraph | edges <- graph.edges }
+              withNormalEdges = { subGraph | edges = graph.edges }
               bodyStmts = topSort subGraph
                             |> L.map (\(path, node) -> (nodePath ++ path, node))
                             |> L.concatMap (nodeToStmt mod withNormalEdges)

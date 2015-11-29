@@ -24,8 +24,8 @@ import GraphEditor.Model exposing (..)
 render : GraphViewModel -> GraphViewModel
 render viewModel =
     let editorState = viewModel.editorState
-    in { viewModel | editorState <-
-                        { editorState | diagram <- GEV.viewGraph viewModel } }
+    in { viewModel | editorState =
+                        { editorState | diagram = GEV.viewGraph viewModel } }
 
 view : DW.CollageLocation -> GraphEditorState -> Html.Html
 view collageLoc editorState =
@@ -54,43 +54,54 @@ update action viewModel =
             case action of
               -- dragging
               DragNodeStart attrs ->
-                  { geState | mouseInteractionState <- Just <| Dragging <| DraggingNode { attrs | overLambdaNode = Nothing } }
+                  { geState | mouseInteractionState = Just <| Dragging <|
+                      DraggingNode
+                        { nodePath = attrs.nodePath
+                        , offset = attrs.offset
+                        , overLambdaNode = Nothing
+                        }
+                  }
               DragEdgeStart attrs ->
-                  { geState | mouseInteractionState <- Just <| Dragging <|
-                      DraggingEdge { attrs | upstreamNodes = upstreamNodes viewModel.currentGraph (fst attrs.fromPort) } }
+                  { geState | mouseInteractionState = Just <| Dragging <|
+                      DraggingEdge
+                        { fromPort = attrs.fromPort
+                        , endPos = attrs.endPos
+                        , upstreamNodes = upstreamNodes viewModel.currentGraph (fst attrs.fromPort)
+                        }
+                  }
               PanStart {offset} ->
-                  { geState | mouseInteractionState <- Just <| Dragging <| DragPanning { offset = offset } }
+                  { geState | mouseInteractionState = Just <| Dragging <| DragPanning { offset = offset } }
               PanTo point ->
                   case geState.mouseInteractionState of
                     Just (Dragging (DragPanning {offset})) ->
-                        { geState | pan <- point `DG.pointSubtract` offset }
+                        { geState | pan = point `DG.pointSubtract` offset }
                     _ -> Debug.crash "unexpected event"
               DragEdgeTo mousePos ->
                   case geState.mouseInteractionState of
                     Just (Dragging (DraggingEdge attrs)) ->
-                        { geState | mouseInteractionState <- Just <| Dragging <| DraggingEdge { attrs | endPos <- mousePos } }
+                        { geState | mouseInteractionState = Just <| Dragging <| DraggingEdge { attrs | endPos = mousePos } }
                     _ -> Debug.crash "unexpected event"
               DragEnd -> 
-                  { geState | mouseInteractionState <- Nothing }
+                  { geState | mouseInteractionState = Nothing }
               -- drag into lambdas
               OverLambda lambdaPath ->
                   case geState.mouseInteractionState of
                     Just (Dragging (DraggingNode attrs)) ->
-                        { geState | mouseInteractionState <- Just <| Dragging <| DraggingNode { attrs | overLambdaNode <- Just lambdaPath } }
+                        { geState | mouseInteractionState = Just <| Dragging <| DraggingNode { attrs | overLambdaNode = Just lambdaPath } }
                     _ -> Debug.crash "unexpected event"
               NotOverLambda lambdaPath ->
                   case geState.mouseInteractionState of
                     Just (Dragging (DraggingNode attrs)) ->
-                        { geState | mouseInteractionState <- Just <| Dragging <| DraggingNode { attrs | overLambdaNode <- Nothing } }
+                        { geState | mouseInteractionState = Just <| Dragging <| DraggingNode { attrs | overLambdaNode = Nothing } }
                     _ -> Debug.crash "unexpected event"
               -- port hovering
               OverInPort inPortId ->
-                  { geState | mouseInteractionState <- Just <| HoveringInPort inPortId }
+                  { geState | mouseInteractionState = Just <| HoveringInPort inPortId }
               OverOutPort outPortId ->
-                  { geState | mouseInteractionState <- Just <| HoveringOutPort outPortId }
+                  { geState | mouseInteractionState = Just <| HoveringOutPort outPortId }
               NotOverPort ->
-                  { geState | mouseInteractionState <- Nothing }
-    in { viewModel | editorState <- newGeState }
+                  { geState | mouseInteractionState = Nothing }
+    in { viewModel | editorState = newGeState }
 
 -- NOTE: doesn't re-render
 updateGraph : GraphAction -> GraphViewModel -> GraphViewModel

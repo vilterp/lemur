@@ -66,12 +66,12 @@ processUpdate update tree =
                                  , children = D.empty
                                  }
               updateFun attrs =
-                  { attrs | children <- attrs.children
+                  { attrs | children = attrs.children
                                           |> D.insert startAttrs.apId subTree }
           in tree |> nestedTreeUpdate startAttrs.fromFramePath updateFun
       EndCall endAttrs ->
           let updateFun attrs =
-                  { attrs | results <- Just endAttrs.results }
+                  { attrs | results = Just endAttrs.results }
           in tree |> nestedTreeUpdate endAttrs.returningFramePath updateFun
 
 nestedTreeUpdate : List ApId -> (CallTreeAttrs -> CallTreeAttrs) -> CallTree -> CallTree
@@ -82,7 +82,7 @@ nestedTreeUpdate apPath updateFun (CallTree tree) =
       (x::xs) ->
           case tree.children |> D.get x of
             Just subTree ->
-                CallTree { tree | children <- tree.children
+                CallTree { tree | children = tree.children
                                       |> D.insert x (subTree |> nestedTreeUpdate xs updateFun) }
             Nothing ->
                 Debug.crash <| "invalid update: no such subtree: " ++ x ++ " in " ++ (toString tree.children)

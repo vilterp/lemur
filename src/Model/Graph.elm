@@ -25,37 +25,37 @@ nestedPosNodeUpdate dict path updateFn =
                 case posNode.node of
                   LambdaNode {nodes, dims} ->
                       nestedPosNodeUpdate nodes xs updateFn
-                        |> R.map (\newNodes -> {posNode | node <- LambdaNode { nodes = newNodes, dims = dims }})
+                        |> R.map (\newNodes -> {posNode | node = LambdaNode { nodes = newNodes, dims = dims }})
                         |> R.map (\newLn -> D.update x (M.map (\_ -> newLn)) dict)
                   _ -> Err "invalid path: not a lambda node"
             Nothing -> Err "invalid path"
 
 moveNode : NodePath -> Point -> Graph -> Result String Graph
 moveNode nodePath newPos graph =
-    nestedPosNodeUpdate graph.nodes nodePath (M.map (\posNode -> { posNode | pos <- newPos }))
-      |> R.map (\newNodes -> { graph | nodes <- newNodes })
+    nestedPosNodeUpdate graph.nodes nodePath (M.map (\posNode -> { posNode | pos = newPos }))
+      |> R.map (\newNodes -> { graph | nodes = newNodes })
 
 -- TODO: check dups...
 addEdge : Edge -> Graph -> Result String Graph
-addEdge newEdge graph = Ok { graph | edges <- newEdge :: graph.edges }
+addEdge newEdge graph = Ok { graph | edges = newEdge :: graph.edges }
 
 removeEdge : Edge -> Graph -> Result String Graph
-removeEdge edge graph = Ok { graph | edges <- L.filter (\e -> e /= edge) graph.edges }
+removeEdge edge graph = Ok { graph | edges = L.filter (\e -> e /= edge) graph.edges }
 
 -- TODO: I think first arg should really be pathAbove, but don't feel like
 -- refactoring. Need Elm IDE!
 addNode : NodePath -> PosNode -> Graph -> Result String Graph
 addNode fullPath posNode graph =
     nestedPosNodeUpdate graph.nodes fullPath (always <| Just posNode)
-      |> R.map (\newNodes -> { graph | nodes <- newNodes })
+      |> R.map (\newNodes -> { graph | nodes = newNodes })
 
 -- TODO: this silently fails with an invalid path, which is not great.
 removeNode : NodePath -> Graph -> Result String Graph
 removeNode nodePath graph =
     let involvingNode e = fst e.from `startsWith` nodePath || fst e.to `startsWith` nodePath
     in (nestedPosNodeUpdate graph.nodes nodePath (always Nothing)
-            |> R.map (\newNodes -> { graph | nodes <- newNodes
-                                           , edges <- L.filter (not << involvingNode) graph.edges }))
+            |> R.map (\newNodes -> { graph | nodes = newNodes
+                                           , edges = L.filter (not << involvingNode) graph.edges }))
 
 getNode : NodePath -> Graph -> Result String PosNode
 getNode nodePath graph =
@@ -77,7 +77,7 @@ moveNodeToLambda lambdaPath droppedNodePath posInLambda graph =
     (getNode droppedNodePath graph)
       `R.andThen` (\posNode -> (removeNode droppedNodePath graph)
         `R.andThen` (\newGraph ->
-          addNode (lambdaPath ++ droppedNodePath) { posNode | pos <- posInLambda } newGraph))
+          addNode (lambdaPath ++ droppedNodePath) { posNode | pos = posInLambda } newGraph))
 
 -- QUERIES
 

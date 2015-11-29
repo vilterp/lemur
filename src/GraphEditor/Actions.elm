@@ -18,7 +18,7 @@ onlyIfEditing viewModel actSet =
 
 posNodeActions nodePath viewModel =
     (case viewModel.editorState.mouseInteractionState of
-        Nothing -> { emptyActionSet | mouseDown <- Just <| stopBubbling <|
+        Nothing -> { emptyActionSet | mouseDown = Just <| stopBubbling <|
                                         \(MouseEvent evt) ->
                                             [InternalAction <|
                                                 DragNodeStart { nodePath = nodePath
@@ -29,17 +29,17 @@ posNodeActions nodePath viewModel =
 
 nodeXOutActions : NodePath -> ActionSet Tag GraphEditorAction
 nodeXOutActions nodePath =
-  { emptyActionSet | click <- Just <| keepBubbling <| always <|
+  { emptyActionSet | click = Just <| keepBubbling <| always <|
                         [ExternalAction <| RemoveNode nodePath] }
 
-edgeXOutActions edge = { emptyActionSet | click <- Just <| keepBubbling <| always <| [ExternalAction <| RemoveEdge edge] }
+edgeXOutActions edge = { emptyActionSet | click = Just <| keepBubbling <| always <| [ExternalAction <| RemoveEdge edge] }
 
 topLevelActions mouseInteractionState =
     case mouseInteractionState of
       Just (Dragging (DragPanning _)) ->
-          { emptyActionSet | mouseMove <- Just <|
+          { emptyActionSet | mouseMove = Just <|
                                 keepBubbling <| \(MouseEvent evt) -> [InternalAction <| PanTo evt.offset]
-                           , mouseUp <- Just <| stopBubbling <| always <| [InternalAction DragEnd] }
+                           , mouseUp = Just <| stopBubbling <| always <| [InternalAction DragEnd] }
       _ -> emptyActionSet
 
 canvasActions : NodePath -> Maybe MouseInteractionState -> ActionSet Tag GraphEditorAction
@@ -47,33 +47,34 @@ canvasActions nodePath mouseInteractionState =
     case mouseInteractionState of
       Nothing ->
           if nodePath == []
-          then { emptyActionSet | mouseDown <- Just <|
+          then { emptyActionSet | mouseDown = Just <|
                   stopBubbling <| \(MouseEvent evt) -> [InternalAction <| PanStart { offset = evt.offset }] }
           else emptyActionSet
       Just (Dragging dragging) ->
           case dragging of
             DraggingNode attrs ->
-               if | attrs.nodePath `directlyUnder` nodePath ->
-                        { emptyActionSet | mouseMove <- 
-                                              (\(MouseEvent evt) -> [ExternalAction <| MoveNode attrs.nodePath (evt.offset `pointSubtract` attrs.offset)])
-                                                        |> stopBubbling |> Just
-                                         , mouseUp <- Just <| stopBubbling <| always <| [InternalAction DragEnd] }
-                  | attrs.nodePath `atOrAbove` nodePath ->
-                        { emptyActionSet | mouseEnter <- Just <| keepBubbling <| always <| [InternalAction <| OverLambda nodePath]
-                                         , mouseLeave <- Just <| keepBubbling <| always <| [InternalAction <| NotOverLambda nodePath]
-                                         , mouseUp <- Just <| keepBubbling <|
-                                            (\(MouseEvent evt) -> [ExternalAction <|
-                                                                      DropNodeInLambda { lambdaPath = nodePath
-                                                                                       , droppedNodePath = attrs.nodePath
-                                                                                       , posInLambda = evt.offset `pointSubtract` attrs.offset 
-                                                                                       }]) }
-                  | otherwise -> emptyActionSet
+              if attrs.nodePath `directlyUnder` nodePath then
+                { emptyActionSet | mouseMove = 
+                                      (\(MouseEvent evt) -> [ExternalAction <| MoveNode attrs.nodePath (evt.offset `pointSubtract` attrs.offset)])
+                                                |> stopBubbling |> Just
+                                 , mouseUp = Just <| stopBubbling <| always <| [InternalAction DragEnd] }
+              else if attrs.nodePath `atOrAbove` nodePath then
+                  { emptyActionSet | mouseEnter = Just <| keepBubbling <| always <| [InternalAction <| OverLambda nodePath]
+                                   , mouseLeave = Just <| keepBubbling <| always <| [InternalAction <| NotOverLambda nodePath]
+                                   , mouseUp = Just <| keepBubbling <|
+                                      (\(MouseEvent evt) -> [ExternalAction <|
+                                                                DropNodeInLambda { lambdaPath = nodePath
+                                                                                 , droppedNodePath = attrs.nodePath
+                                                                                 , posInLambda = evt.offset `pointSubtract` attrs.offset 
+                                                                                 }]) }
+              else
+                emptyActionSet
             DraggingEdge attrs ->
                if nodePath == []
-               then { emptyActionSet | mouseMove <- 
+               then { emptyActionSet | mouseMove = 
                                           (\(MouseEvent evt) -> [InternalAction <| DragEdgeTo evt.offset])
                                                 |> stopBubbling |> Just
-                                 , mouseUp <- Just <| stopBubbling <| always <| [InternalAction DragEnd] }
+                                 , mouseUp = Just <| stopBubbling <| always <| [InternalAction DragEnd] }
                else emptyActionSet
             _ -> emptyActionSet
       Just _ -> emptyActionSet
@@ -85,8 +86,8 @@ directlyUnder xs ys = L.length xs - 1 == L.length ys
 outPortActions : GraphViewModel -> OutPortId -> ActionSet Tag GraphEditorAction
 outPortActions viewModel portId =
     let hoverActions =
-          { emptyActionSet | mouseEnter <- Just <| stopBubbling <| always [InternalAction <| OverOutPort portId]
-                           , mouseLeave <- Just <| stopBubbling <| always [InternalAction <| NotOverPort] }
+          { emptyActionSet | mouseEnter = Just <| stopBubbling <| always [InternalAction <| OverOutPort portId]
+                           , mouseLeave = Just <| stopBubbling <| always [InternalAction <| NotOverPort] }
     in case viewModel.mode of
       EditingModeDenorm ->
           if outPortState viewModel portId == NormalPort
@@ -94,7 +95,7 @@ outPortActions viewModel portId =
               Just (Dragging (DraggingEdge _)) ->
                   emptyActionSet
               _ -> 
-                  { hoverActions | mouseDown <- Just <| stopBubbling <|
+                  { hoverActions | mouseDown = Just <| stopBubbling <|
                             (\evt -> case mousePosAtPath evt [TopLevel, Canvas] of
                                         Just pos -> [ InternalAction <| NotOverPort
                                                     , InternalAction <| DragEdgeStart { fromPort = portId, endPos = pos }
@@ -110,11 +111,11 @@ inPortActions viewModel portId =
     in case viewModel.editorState.mouseInteractionState of
         Just (Dragging (DraggingEdge attrs)) ->
             if portState == ValidPort
-            then { emptyActionSet | mouseUp <- Just <| stopBubbling
+            then { emptyActionSet | mouseUp = Just <| stopBubbling
                       <| always <| [ ExternalAction <| AddEdge { from = attrs.fromPort, to = portId }
                                    , InternalAction DragEnd
                                    ] }
             else emptyActionSet
         _ ->
-            { emptyActionSet | mouseEnter <- Just <| stopBubbling <| always [InternalAction <| OverInPort portId]
-                             , mouseLeave <- Just <| stopBubbling <| always [InternalAction <| NotOverPort] }
+            { emptyActionSet | mouseEnter = Just <| stopBubbling <| always [InternalAction <| OverInPort portId]
+                             , mouseLeave = Just <| stopBubbling <| always [InternalAction <| NotOverPort] }
