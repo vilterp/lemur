@@ -3,6 +3,7 @@ module ElementsPanel where
 import Signal as S
 import Dict as D
 import List as L
+import Json.Decode as JsDec
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -45,10 +46,17 @@ modElementView addr (funcId, func) =
       , span [ class "element-label" ] [ text <| Model.funcName func ]
       , span
           [ class "edit-button"
-          , let action = case func of
-                            Model.UserFunc attrs -> Model.OpenUDF funcId
-                            Model.BuiltinFunc attrs -> Model.OpenBuiltin funcId
-            in onClick addr action
+          , let
+              action =
+                case func of
+                  Model.UserFunc attrs -> Model.OpenUDF funcId
+                  Model.BuiltinFunc attrs -> Model.OpenBuiltin funcId
+            in
+              onWithOptions
+                "click"
+                { stopPropagation = True, preventDefault = True }
+                (JsDec.succeed ())
+                (\_ -> S.message addr action)
           ]
           [ text "edit" ]
       ]

@@ -12,6 +12,7 @@ import Diagrams.Geom exposing (Point, Dims)
 import Diagrams.Wiring exposing (CollageLocation, PrimMouseEvent)
 import Diagrams.Core as DC
 import Diagrams.Interact as DI
+import Http
 
 -- hope this doesn't become circular
 import Runtime.Model
@@ -59,8 +60,9 @@ type Action
     | GraphAction GraphAction
     | CanvasMouseEvt (CollageLocation, PrimMouseEvent)
     -- running
-    | StartExecution FuncName
-    | ExecutionUpdate RunId Runtime.Model.ExecutionUpdate
+    | RunCode CodeReq
+    | RunCodeError Http.Error
+    | ExecutionUpdates RunId (List Runtime.Model.ExecutionUpdate)
     --
     | NoOp
 

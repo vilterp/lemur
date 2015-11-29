@@ -18,11 +18,8 @@ type alias ABState = List ButtonGroup
 type alias ButtonGroup = List Button
 type alias Button =
     { name : String
-    , action : ABAction
+    , action : Action
     }
-type ABAction
-    = CodeAction CodeReq
-    | NormalAction Action
 
 getABState : State -> ABState
 getABState state =
@@ -36,7 +33,7 @@ geToolsSection state =
           case attrs.mode of
             EditingMode ->
                 Just [ { name = "Add Lambda"
-                       , action = NormalAction <| GraphAction AddLambda
+                       , action = GraphAction AddLambda
                        }
                      ]
             ViewingRunMode _ ->
@@ -68,7 +65,7 @@ runSection state =
                             , mainName = attrs.name
                             }
                       in Just [ { name = "Run"
-                                , action = CodeAction codeReq
+                                , action = RunCode codeReq
                                 }
                               ]
                   _ -> Nothing
@@ -77,32 +74,26 @@ runSection state =
       EditingBuiltin _ ->
           Nothing
 
-view : S.Address Action -> S.Address (Maybe CodeReq) -> State -> Html
-view actionAddr codeAddr state =
+view : S.Address Action -> State -> Html
+view addr state =
     getABState state
-      |> L.map (viewButtonGroup actionAddr codeAddr)
+      |> L.map (viewButtonGroup addr)
       |> L.intersperse buttonGroupSep
       |> div [ id "action-bar" ]
 
-viewButtonGroup : S.Address Action -> S.Address (Maybe CodeReq) -> ButtonGroup -> Html
-viewButtonGroup actionAddr codeAddr bg =
-    L.map (viewButton actionAddr codeAddr) bg
+viewButtonGroup : S.Address Action -> ButtonGroup -> Html
+viewButtonGroup addr bg =
+    L.map (viewButton addr) bg
       |> div [ class "action-bar-button-group" ]
 
 -- Later: KB shortcut (for display), icon, callback (?)
-viewButton : S.Address Action -> S.Address (Maybe CodeReq) -> Button -> Html
-viewButton actionAddr codeAddr button =
-    let actionAttr =
-          case button.action of
-            CodeAction codeReq ->
-                onClick codeAddr <| Just codeReq
-            NormalAction action ->
-                onClick actionAddr action
-    in div
-        [ class "actionbar-button"
-        , actionAttr
-        ]
-        [ text button.name ]
+viewButton : S.Address Action -> Button -> Html
+viewButton addr button =
+  div
+    [ class "actionbar-button"
+    , onClick addr button.action
+    ]
+    [ text button.name ]
 
 buttonGroupSep : Html
 buttonGroupSep = div [ class "actionbar-vertsep" ] []

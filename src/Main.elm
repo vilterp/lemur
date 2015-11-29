@@ -1,8 +1,5 @@
 module Main where
 
-import Html exposing (..)
-import Html.Events exposing (..)
-import Html.Attributes exposing (..)
 import Signal as S
 import Debug
 import Dict as D
@@ -15,22 +12,24 @@ import Diagrams.Core as DC
 import Diagrams.Geom as DG
 import Diagrams.Wiring as DW
 import Diagrams.Interact as DI
+import Http
+import Html exposing (..)
+import Html.Events exposing (..)
+import Html.Attributes exposing (..)
+import StartApp
+import Effects exposing (Effects)
 
 import Model exposing (..)
 import GraphEditor.Model exposing (..)
 import Util exposing (..)
-
 import ElementsPanel
 import ActionBar
 import GraphEditor as GE
 import CommonView exposing (..)
-
-import TestData
-
 import Codegen
 import Runtime.Decode
 import Runtime.Model
-import Http
+import TestData
 
 -- MODEL
 
@@ -38,67 +37,141 @@ import Http
 
 -- CONTROLLER
 
-update : Action -> State -> State
+update : Action -> State -> (State, Effects Action)
 update action state =
     case Debug.log "action" action of
-      NoOp -> state
+      NoOp ->
+        (state, Effects.none)
+
       -- editor stuff
       FilterElemPanel filter ->
-          { state | elemPanelFilter = filter }
+          ( { state | elemPanelFilter = filter }
+          , Effects.none
+          )
+
       OpenUDF funcName ->
-          { state | viewState = ViewingGraph { name = funcName
-                                              , editorState = GE.initState
-                                              , mode = EditingMode
-                                              } }
-              |> renderState
+          ( { state | viewState =
+                ViewingGraph
+                  { name = funcName
+                  , editorState = GE.initState
+                  , mode = EditingMode
+                  }
+            }
+            |> renderState
+          , Effects.none
+          )
+
       OpenBuiltin funcName ->
-          { state | viewState = EditingBuiltin { name = funcName } }
+          ( { state | viewState = EditingBuiltin { name = funcName } }
+          , Effects.none
+          )
+
       OpenRun runId ->
-          let run = state |> getRunOrCrash runId
-          in { state | viewState = ViewingGraph { name = run.userFuncName
-                                                 , editorState = GE.initState
-                                                 , mode = ViewingRunMode runId
-                                                 } }
-                |> renderState
+          ( let
+              run =
+                state |> getRunOrCrash runId
+            in
+              { state | viewState =
+                  ViewingGraph
+                    { name = run.userFuncName
+                    , editorState = GE.initState
+                    , mode = ViewingRunMode runId
+                    }
+              }
+              |> renderState
+          , Effects.none
+          )
+
       -- running
-      StartExecution funcName ->
-          state
-            |> addNewRun funcName
-            |> update (OpenRun <| state.nextRunId)
-      ExecutionUpdate runId update ->
-          state
-            |> processExecutionUpdate runId update
+      RunCode codeReq ->
+          ( let
+              stateWithNewRun =
+                state
+                  |> addNewRun codeReq.mainName
+
+              runId =
+                state.nextRunId
+
+              run =
+                stateWithNewRun |> getRunOrCrash runId
+            in
+              { stateWithNewRun | viewState =
+                  ViewingGraph
+                    { name = run.userFuncName
+                    , editorState = GE.initState
+                    , mode = ViewingRunMode runId
+                    }
+              }
+              |> renderState
+          , runCode codeReq
+              |> T.mapError RunCodeError
+              |> T.toResult
+              |> T.map (\res ->
+                  case res of
+                    Ok act -> act
+                    Err act -> act)
+              |> Effects.task
+          )
+
+      RunCodeError error ->
+        Debug.crash <| "code running error: " ++ toString error
+
+      ExecutionUpdates runId updates ->
+          ( List.foldl (processExecutionUpdate runId) state updates
+              |> renderState
+          , Effects.none
+          )
             --|> renderState
       -- graph ops
       CanvasMouseEvt (collageLoc, primMouseEvt) ->
           -- TODO: save collage loc
           case state.viewState of
             ViewingGraph graphViewAttrs ->
-                let clState = { state | collageLoc = collageLoc }
-                    (newMS, actions) =
-                        DI.processMouseEvent 
-                            graphViewAttrs.editorState.diagram
-                            graphViewAttrs.editorState.mouseState
-                            primMouseEvt
-                    process : GraphEditorAction -> GraphViewModel -> GraphViewModel
-                    process act viewModel =
-                        case Debug.log "ge act" act of
-                          InternalAction intAct ->
-                              GE.update intAct viewModel
-                          ExternalAction graphAction ->
-                              GE.updateGraph graphAction viewModel
-                    newViewModel =
-                        L.foldl process (makeViewModel clState) actions
-                          |> GE.render
-                    newEditorState = newViewModel.editorState
-                    mis = newEditorState.mouseInteractionState
-                in { clState | mod = newViewModel.mod
-                             , viewState = ViewingGraph
-                                  { graphViewAttrs | editorState =
-                                                        { newEditorState | mouseState = newMS } } }
+                let
+                  clState =
+                    { state | collageLoc = collageLoc }
+
+                  (newMS, actions) =
+                    DI.processMouseEvent 
+                        graphViewAttrs.editorState.diagram
+                        graphViewAttrs.editorState.mouseState
+                        primMouseEvt
+
+                  process : GraphEditorAction -> GraphViewModel -> GraphViewModel
+                  process act viewModel =
+                    case Debug.log "ge act" act of
+                      InternalAction intAct ->
+                          GE.update intAct viewModel
+                      ExternalAction graphAction ->
+                          GE.updateGraph graphAction viewModel
+                  
+                  newViewModel =
+                    L.foldl process (makeViewModel clState) actions
+                      |> GE.render
+                  
+                  newEditorState =
+                    newViewModel.editorState
+
+                  mis =
+                    newEditorState.mouseInteractionState
+                in
+                  ( { clState
+                        | mod = newViewModel.mod
+                        , viewState =
+                            ViewingGraph
+                              { graphViewAttrs | editorState =
+                                  { newEditorState | mouseState = newMS }
+                              }
+                    }
+                  , Effects.none
+                  )
+
             EditingBuiltin _ ->
-                let l = Debug.log "canvas action while editing builtin" ()
-                in state
+                let
+                  l = Debug.log "canvas action while editing builtin" ()
+                in
+                  ( state, Effects.none )
+
       GraphAction graphAction ->
           case state.viewState of
             ViewingGraph graphViewAttrs ->
@@ -106,18 +179,27 @@ update action state =
                   EditingMode ->
                       -- TODO: put this in GraphEditor's update function
                       -- GE.updateGraph graphAction (makeViewModel state)
-                      let newViewModel =
-                              GE.updateGraph graphAction (makeViewModel state)
-                                |> GE.render
-                          newViewAttrs = { graphViewAttrs | editorState = newViewModel.editorState }
-                      in { state | viewState = ViewingGraph newViewAttrs
-                                 , mod = newViewModel.mod }
+                      let
+                        newViewModel =
+                          GE.updateGraph graphAction (makeViewModel state)
+                            |> GE.render
+                        
+                        newViewAttrs =
+                          { graphViewAttrs | editorState = newViewModel.editorState }
+                      in
+                        ( { state | viewState = ViewingGraph newViewAttrs
+                                  , mod = newViewModel.mod
+                          }
+                        , Effects.none
+                        )
+
                   ViewingRunMode _ ->
                     let l = Debug.log "graph action while viewing run" ()
-                    in state
+                    in ( state, Effects.none )
+
             EditingBuiltin _ ->
                 let l = Debug.log "graph action while editing builtin" ()
-                in state
+                in ( state, Effects.none )
 
 defaultPos = (0, 0)
 
@@ -132,13 +214,13 @@ renderState state =
 
 -- VIEW
 
-view : State -> Html
-view state =
+view : S.Address Action -> State -> Html
+view addr state =
     div
       [ id "app" ]
       [ topSection
-      , ActionBar.view htmlUpdates.address codeExecutionRequests.address state
-      , ElementsPanel.view htmlUpdates.address state
+      , ActionBar.view addr state
+      , ElementsPanel.view addr state
       , centerSection state
       --, rightSection
       ]
@@ -281,8 +363,6 @@ initState =
     }
       |> renderState
 
-htmlUpdates = S.mailbox Model.NoOp
-
 editorLocFunc : DW.CollageLocFunc
 editorLocFunc windowDims =
     { offset = (252, 101)
@@ -291,48 +371,33 @@ editorLocFunc windowDims =
              }
     }
 
+
+app : StartApp.App State
+app =
+  StartApp.start
+    { init = (initState, Effects.none)
+    , update = update
+    , view = view
+    , inputs = [collageEvents]
+    }
+
 collageEvents = DW.makeUpdateStream editorLocFunc |> S.map CanvasMouseEvt
-
-updates : S.Signal Action
-updates = S.merge collageEvents htmlUpdates.signal
-
-state : Signal State
-state = S.foldp update initState updates
 
 main : Signal Html
 main =
-  S.map view state
+  app.html
 
-codeExecutionRequests : S.Mailbox (Maybe CodeReq)
-codeExecutionRequests = 
-    S.mailbox Nothing
+port tasks : S.Signal (T.Task Effects.Never ())
+port tasks =
+  app.tasks
 
-port codeExecTasks : Signal (T.Task Http.Error ())
-port codeExecTasks =
-    codeExecutionRequests.signal
-      |> S.map requestAndSend
-
-requestAndSend : Maybe CodeReq -> T.Task Http.Error ()
-requestAndSend codeReq =
-    case codeReq of
-      Nothing -> T.succeed ()
-      Just {runId, mod, mainName} ->
-          S.send htmlUpdates.address (StartExecution mainName)
-            `T.andThen`
-              (\_ -> requestExecution mod mainName
-                `T.andThen` (sendToUpdates runId))
-
-sendToUpdates : RunId -> List Runtime.Model.ExecutionUpdate -> T.Task Http.Error ()
-sendToUpdates runId updates =
-    updates
-      |> L.map (\update -> ExecutionUpdate runId update |> S.send htmlUpdates.address)
-      |> (\tasks -> T.sequence tasks
-                      `T.andThen` (always <| T.succeed ()))
-
-requestExecution : Module -> String -> T.Task Http.Error (List Runtime.Model.ExecutionUpdate)
-requestExecution mod mainFunc =
-    Http.url "/run_python" [("code", Codegen.moduleToPython mainFunc mod)]
+runCode : CodeReq -> T.Task Http.Error Action
+runCode codeReq =
+    (Http.url
+      "/run_python"
+      [("code", Codegen.moduleToPython codeReq.mainName codeReq.mod)])
       |> Http.get Runtime.Decode.updateList
+      |> T.map (\updates -> ExecutionUpdates codeReq.runId updates)
 
 bodyFromCode : String -> Http.Body
 bodyFromCode code =
