@@ -16,23 +16,33 @@ import Model
 
 view : S.Address Model.Action -> Model.State -> Html
 view addr state =
+  let
+    graphFuncs =
+      state.mod.graphFuncs
+        |> D.toList
+        |> L.sortBy (snd >> Model.funcName)
+
+    pythonFuncs =
+      state.mod.pythonFuncs
+        |> D.toList
+        |> L.sortBy (snd >> Model.funcName)
+  in
     div [ id "left" ]
       [ scrollPanel
           [ div [ class "panel-header-label" ] [ text "Elements" ]
           --, input [ type' "text", id "search-bar" ] [] -- TODO search bar
           ]
-          [ panelSection "Members" (
-                (state.mod.graphFuncs |> D.toList)
-                      ++ (state.mod.pythonFuncs |> D.toList)
-                      |> L.map (modElementView addr)
-                      |> ul [ class "module-elements" ]
-              )
-          , panelSection "Runs" (
-                state.runs
-                  |> D.toList
-                  |> L.map (runView addr)
-                  |> ul [ class "module-elements" ]
-              )
+          [ panelSection
+              "Members"
+              (graphFuncs ++ pythonFuncs
+                |> L.map (modElementView addr)
+                |> ul [ class "module-elements" ])
+          , panelSection
+              "Runs"
+              (state.runs
+                |> D.toList
+                |> L.map (runView addr)
+                |> ul [ class "module-elements" ])
           ]
       ]
 
