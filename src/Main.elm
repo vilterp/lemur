@@ -115,7 +115,10 @@ update action state =
           )
 
       RunCodeError error ->
-        Debug.crash <| "code running error: " ++ toString error
+        let
+          d = Debug.log <| "CODE RUNNING ERROR" ++ toString error
+        in
+          (state, Effects.none)
 
       ExecutionUpdates runId updates ->
           ( List.foldl (processExecutionUpdate runId) state updates

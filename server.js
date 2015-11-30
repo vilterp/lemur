@@ -49,7 +49,7 @@ app.post('/run_python', function(req, res) {
         if(err) throw err;
         
         var stdout_messages = [];
-        var stderr_messages = []
+        var stderr_messages = [];
 
         var python = child_process.spawn('python', [code_path]);
         // TODO: implement f*#@$ing framed protocol
@@ -71,9 +71,13 @@ app.post('/run_python', function(req, res) {
         python.on('close', function(code, signal) {
           console.log('exit code: ', code);
 
-          // res.end();
-
-          res.send(stdout_messages);
+          if(code == 0) {
+            res.status(200);
+            res.send(stdout_messages);
+          } else {
+            res.status(500);
+            res.send(stderr_messages);
+          }
 
           console.log('contents:', fs.readdirSync(path));
 
