@@ -4,7 +4,8 @@
     "repository": "https://github.com/vilterp/lemur.git",
     "license": "BSD3",
     "source-directories": [
-        "src"
+        "src",
+        "elm-diagrams"
     ],
     "exposed-modules": [],
     "native-modules": true,
