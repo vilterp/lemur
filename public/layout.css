@@ -270,12 +270,12 @@ li.module-element.selected {
     padding-left: 5px;
 }
 
-.builtin-func-sig {
+.python-func-sig {
     font-family: monospace;
     font-size: 11pt;
 }
 
-.builtin-code-editor {
+.python-code-editor {
     margin-left: 20px;
     font-family: monospace;
     width: 500px;

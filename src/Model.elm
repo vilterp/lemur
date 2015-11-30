@@ -35,7 +35,7 @@ type ViewState
         , editorState : GraphEditorState
         , mode : GraphViewMode
         }
-    | EditingBuiltin { name : FuncName }
+    | EditingPythonFunc { name : FuncName }
 
 type GraphViewMode
     = EditingMode
@@ -54,7 +54,7 @@ type Action
     -- editor stuff
     = FilterElemPanel String
     | OpenUDF FuncName
-    | OpenBuiltin FuncName
+    | OpenPythonFunc FuncName
     | OpenRun RunId
     -- graph ops
     | GraphAction GraphAction
@@ -103,18 +103,17 @@ type alias FuncId = FuncName -- someday: within a module
 -- assumes no duplicate names enforced by editor
 type alias Module =
     { name : ModName
-    , builtinFuncs : D.Dict String Func
+    , pythonFuncs : D.Dict String Func
     , userFuncs : D.Dict String Func
     }
 
 -- TODO: can't figure out rn how to use extensible records here
 type Func
-    -- TODO: this should be called textual or something, not builtin.
-    -- these are also "user defined"
-    = BuiltinFunc BuiltinFuncAttrs
+    = PythonFunc PythonFuncAttrs
     | UserFunc UserFuncAttrs
+    -- TODO call this graph function
 
-type alias BuiltinFuncAttrs =
+type alias PythonFuncAttrs =
     { name : String
     , params : List String
     , returnVals : List String
@@ -128,9 +127,9 @@ type alias UserFuncAttrs =
 
 -- TODO: user func args are computed from graph
 
-emptyBuiltinFunc : String -> Func
-emptyBuiltinFunc name =
-    BuiltinFunc { name = name
+emptyPythonFunc : String -> Func
+emptyPythonFunc name =
+    PythonFunc { name = name
                 , pythonCode = "return None"
                 , params = []
                 , returnVals = ["result"]
@@ -147,12 +146,12 @@ funcName : Func -> FuncName
 funcName func =
     case func of
       UserFunc attrs -> attrs.name
-      BuiltinFunc attrs -> attrs.name
+      PythonFunc attrs -> attrs.name
 
 -- assumes no duplicate names
 getFunc : Module -> FuncName -> Maybe Func
 getFunc mod name =
-    case D.get name mod.builtinFuncs of
+    case D.get name mod.pythonFuncs of
       Just bif -> Just bif
       Nothing -> D.get name mod.userFuncs
 

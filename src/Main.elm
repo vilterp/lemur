@@ -62,8 +62,8 @@ update action state =
           , Effects.none
           )
 
-      OpenBuiltin funcName ->
-          ( { state | viewState = EditingBuiltin { name = funcName } }
+      OpenPythonFunc funcName ->
+          ( { state | viewState = EditingPythonFunc { name = funcName } }
           , Effects.none
           )
 
@@ -167,9 +167,9 @@ update action state =
                   , Effects.none
                   )
 
-            EditingBuiltin _ ->
+            EditingPythonFunc _ ->
                 let
-                  l = Debug.log "canvas action while editing builtin" ()
+                  l = Debug.log "canvas action while editing python func" ()
                 in
                   ( state, Effects.none )
 
@@ -198,8 +198,8 @@ update action state =
                     let l = Debug.log "graph action while viewing run" ()
                     in ( state, Effects.none )
 
-            EditingBuiltin _ ->
-                let l = Debug.log "graph action while editing builtin" ()
+            EditingPythonFunc _ ->
+                let l = Debug.log "graph action while editing python func" ()
                 in ( state, Effects.none )
 
 defaultPos = (0, 0)
@@ -210,7 +210,7 @@ renderState state =
       ViewingGraph attrs ->
           let vm = makeViewModel state |> GE.render
           in { state | viewState = ViewingGraph { attrs | editorState = vm.editorState } }
-      EditingBuiltin _ ->
+      EditingPythonFunc _ ->
           Debug.crash "unexpected usage of renderState"
 
 -- VIEW
@@ -267,16 +267,16 @@ centerSection state =
                                  )
                       , mainView
                       )
-            EditingBuiltin attrs ->
-                ( builtinIcon
+            EditingPythonFunc attrs ->
+                ( pythonIcon
                 , attrs.name
-                , state.mod.builtinFuncs
+                , state.mod.pythonFuncs
                     |> D.get attrs.name
-                    |> getMaybeOrCrash "no such builtin function"
+                    |> getMaybeOrCrash "no such python function"
                     |> (\func ->
                           case func of
-                            BuiltinFunc attrs -> builtinView attrs
-                            _ -> Debug.crash "only expecting builtin funcs here")
+                            PythonFunc attrs -> pythonEditorView attrs
+                            _ -> Debug.crash "only expecting python funcs here")
                 )
     in div
       [ id "center" ]
@@ -297,33 +297,33 @@ centerSection state =
 
 -- TODO: make editable
 -- TODO: show / edit type sig
-builtinView : BuiltinFuncAttrs -> Html
-builtinView builtinAttrs =
+pythonEditorView : PythonFuncAttrs -> Html
+pythonEditorView pythonAttrs =
     div
-      [ class "builtin-editor" ]
+      [ class "python-editor" ]
       [ div
-          [ class "builtin-func-sig" ]
-          [ text <| "def " ++ builtinAttrs.name ++ "("
+          [ class "python-func-sig" ]
+          [ text <| "def " ++ pythonAttrs.name ++ "("
           , input
-              [ class "code-input builtin-args"
+              [ class "code-input python-args"
               , type' "text"
-              , builtinAttrs.params |> String.join ", " |> value ]
+              , pythonAttrs.params |> String.join ", " |> value ]
               []
           , text "): # => {"
           , input
-              [ class "code-input builtin-returns"
+              [ class "code-input python-returns"
               , type' "text"
-              , builtinAttrs.returnVals |> String.join ", " |> value ]
+              , pythonAttrs.returnVals |> String.join ", " |> value ]
               []
           , text "}"
           ]
       , div
-          [ class "builtin-code" ]
+          [ class "python-code" ]
           [ textarea
-              [ class "builtin-code-editor"
+              [ class "python-code-editor"
               , spellcheck False
               ]
-              [ builtinAttrs.pythonCode |> text ]
+              [ pythonAttrs.pythonCode |> text ]
           ]
       ]
 

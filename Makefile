@@ -16,3 +16,5 @@ loc:
 	find src -regex ".*elm" | xargs wc -l
 	find elm-diagrams/Diagrams -regex ".*elm" | xargs wc -l
 
+start: all
+	node server.js

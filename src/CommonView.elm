@@ -43,14 +43,14 @@ icon bgColor letterColor letter =
       `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid bgColor)
 
 udfIcon = icon Color.lightBlue Color.black 'G' -- graph
-builtinIcon = icon Color.yellow Color.black 'T' -- text
+pythonIcon = icon Color.yellow Color.black 'T' -- text
 runIcon = icon Color.brown Color.white 'R'
 
 elementIcon : Model.Func -> Html
 elementIcon func =
     let curIcon = case func of
                     Model.UserFunc _ -> udfIcon
-                    Model.BuiltinFunc _ -> builtinIcon
+                    Model.PythonFunc _ -> pythonIcon
     in curIcon |> asHtml
 
 asHtml : DC.Diagram t a -> Html.Html

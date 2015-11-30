@@ -38,7 +38,7 @@ geToolsSection state =
                      ]
             ViewingRunMode _ ->
                 Nothing
-      EditingBuiltin _ ->
+      EditingPythonFunc _ ->
           Nothing
 
 runSection : State -> Maybe ButtonGroup
@@ -71,7 +71,7 @@ runSection state =
                   _ -> Nothing
             ViewingRunMode _ ->
                 Nothing
-      EditingBuiltin _ ->
+      EditingPythonFunc _ ->
           Nothing
 
 view : S.Address Action -> State -> Html

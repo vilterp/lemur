@@ -62,7 +62,7 @@ makeViewModel state =
                     ViewingRunMode runId ->
                         ViewingRunModeDenorm runId (getRunOrCrash runId state)
               }
-      EditingBuiltin _ -> Debug.crash "expecting graph viewing state"
+      EditingPythonFunc _ -> Debug.crash "expecting graph viewing state"
 
 type PortState
     = NormalPort

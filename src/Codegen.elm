@@ -160,7 +160,7 @@ userFuncToAst mod userFunc =
 funcToString : Module -> Model.Func -> String
 funcToString mod func =
    case func of
-     Model.BuiltinFunc attrs ->
+     Model.PythonFunc attrs ->
          let heading = "def " ++ attrs.name ++
                           "(" ++ (S.join ", " attrs.params) ++ "):"
          in PrettyPrint.headerBlock heading
@@ -173,7 +173,7 @@ funcToString mod func =
 moduleToPython : FuncName -> Module -> String
 moduleToPython mainFunc mod =
     let funcStrings =
-          D.union mod.userFuncs mod.builtinFuncs
+          D.union mod.userFuncs mod.pythonFuncs
             |> D.toList
             |> L.map (funcToString mod << snd)
         importStmt = AST.ImportAll ["log_call"]

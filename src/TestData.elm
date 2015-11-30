@@ -13,38 +13,38 @@ import Codegen
 helloMap : Module
 helloMap =
     { name = "HelloMap"
-    , builtinFuncs =
+    , pythonFuncs =
         D.fromList
             [ ( "names"
-              , BuiltinFunc { name = "names"
+              , PythonFunc { name = "names"
                             , params = []
                             , returnVals = ["names"]
                             , pythonCode = "return {'names':['Pete', 'Borja', 'Ravi', 'Mike']}"
                             }
               )
             , ( "Map"
-              , BuiltinFunc { name = "Map"
+              , PythonFunc { name = "Map"
                             , params = ["function", "list"]
                             , returnVals = ["mappedList"]
                             , pythonCode = "arg_name = function.func_code.co_varnames[0]\ndef apply_single(item):\n  result = log_call(function, 'map_internal', {arg_name: item})\n  return result.values()[0]\nreturn {'mappedList': map(apply_single, list)}"
                             }
               )
             , ( "add_excl"
-              , BuiltinFunc { name = "add_excl"
+              , PythonFunc { name = "add_excl"
                             , params = ["str"]
                             , returnVals = ["added"]
                             , pythonCode = "return {'added':str + '!'}"
                             }
               )
             , ( "length"
-              , BuiltinFunc { name = "length"
+              , PythonFunc { name = "length"
                             , params = ["str"]
                             , returnVals = ["length"]
                             , pythonCode = "return {'length':len(str)}"
                             }
               )
             , ( "add_hi"
-              , BuiltinFunc { name = "add_hi"
+              , PythonFunc { name = "add_hi"
                             , params = ["str"]
                             , returnVals = ["added"]
                             , pythonCode = "return {'added': 'Hi ' + str}"
@@ -53,77 +53,77 @@ helloMap =
             -- TODO: define this in terms of join;
             -- define join in terms of fold
             , ( "join"
-              , BuiltinFunc { name = "join"
+              , PythonFunc { name = "join"
                             , params = ["joiner", "list"]
                             , returnVals = ["joinedList"]
                             , pythonCode = "return {'joinedList': joiner.join(list)}"
                             }
               )
             , ( "Zero" 
-              , BuiltinFunc { name = "Zero"
+              , PythonFunc { name = "Zero"
                             , params = []
                             , returnVals = ["num"]
                             , pythonCode = "return {'num': 0}"
                             }
               )
             , ( "One" 
-              , BuiltinFunc { name = "One"
+              , PythonFunc { name = "One"
                             , params = []
                             , returnVals = ["num"]
                             , pythonCode = "return {'num': 1}"
                             }
               )
             , ( "Space" 
-              , BuiltinFunc { name = "Space"
+              , PythonFunc { name = "Space"
                             , params = []
                             , returnVals = ["space"]
                             , pythonCode = "return {'space': ' '}"
                             }
               )
             , ( "Plus" 
-              , BuiltinFunc { name = "Plus"
+              , PythonFunc { name = "Plus"
                             , params = ["a", "b"]
                             , returnVals = ["res"]
                             , pythonCode = "return {'res': a + b}"
                             }
               )
             , ( "Tup2" 
-              , BuiltinFunc { name = "Tup2"
+              , PythonFunc { name = "Tup2"
                             , params = ["first", "second"]
                             , returnVals = ["tup"]
                             , pythonCode = "return {'tup': [first, second]}"
                             }
               )
             , ( "Split_on_Whitespace" 
-              , BuiltinFunc { name = "Split_on_Whitespace"
+              , PythonFunc { name = "Split_on_Whitespace"
                             , params = ["str"]
                             , returnVals = ["split"]
                             , pythonCode = "import re\nreturn {'split': re.split(r'\\s', str)}"
                             }
               )
             , ( "Concatenate" 
-              , BuiltinFunc { name = "Concatenate"
+              , PythonFunc { name = "Concatenate"
                             , params = ["lists"]
                             , returnVals = ["result"]
                             , pythonCode = "return {'result': [x for x in l for l in lists]}"
                             }
               )
             , ( "Reduce_by_Key" 
-              , BuiltinFunc { name = "Reduce_by_Key"
+              , PythonFunc { name = "Reduce_by_Key"
                             , params = ["combiner", "initial", "items"]
                             , returnVals = ["results"]
                             , pythonCode = "results = {}\narg_names = combiner.func_code.co_varnames[0:2]\ndef combiner_wrapper(state, item):\n  result = log_call(combiner, 'reduce_by_key_internal', {arg_names[0]: state, arg_names[1]: item})\n  return result.values()[0]\nfor key, value in items:\n  if key not in results:\n    results[key] = initial\n  results[key] = combiner_wrapper(results[key], value)\nreturn {'results': results}"
                             }
               )
             , ("gettysburg_url"
-              , BuiltinFunc { name = "gettysburg_url"
+              , PythonFunc { name = "gettysburg_url"
                             , params = []
                             , returnVals = ["url"]
                             , pythonCode = "return {'url': 'https://gist.githubusercontent.com/vilterp/d81dba5421069e9c4ac4/raw/751a80c01676614b0323e36777164131aaaf4596/gettysburg.txt'}"
                             }
               )
             , ("HTTP_get"
-              , BuiltinFunc { name = "HTTP_get"
+              , PythonFunc { name = "HTTP_get"
                             , params = ["url"]
                             , returnVals = ["response_text"]
                             , pythonCode = "import requests\nreturn {'response_text': requests.get(url).text}"

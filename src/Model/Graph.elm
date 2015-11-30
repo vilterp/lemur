@@ -218,7 +218,7 @@ outPortToString (nodePath, slot) =
 funcParams : Module -> Func -> List String
 funcParams mod func =
     case func of
-      BuiltinFunc attrs -> attrs.params
+      PythonFunc attrs -> attrs.params
       UserFunc attrs ->
           freeInPorts mod attrs.graph []
             |> L.map inPortToString
@@ -226,7 +226,7 @@ funcParams mod func =
 funcReturnVals : Module -> Func -> List String
 funcReturnVals mod func =
     case func of
-      BuiltinFunc attrs -> attrs.returnVals
+      PythonFunc attrs -> attrs.returnVals
       UserFunc attrs ->
           freeOutPorts mod attrs.graph []
             |> L.map outPortToString

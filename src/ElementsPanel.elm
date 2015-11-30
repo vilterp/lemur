@@ -23,7 +23,7 @@ view addr state =
           ]
           [ panelSection "Members" (
                 (state.mod.userFuncs |> D.toList)
-                      ++ (state.mod.builtinFuncs |> D.toList)
+                      ++ (state.mod.pythonFuncs |> D.toList)
                       |> L.map (modElementView addr)
                       |> ul [ class "module-elements" ]
               )
@@ -50,7 +50,7 @@ modElementView addr (funcId, func) =
               action =
                 case func of
                   Model.UserFunc attrs -> Model.OpenUDF funcId
-                  Model.BuiltinFunc attrs -> Model.OpenBuiltin funcId
+                  Model.PythonFunc attrs -> Model.OpenPythonFunc funcId
             in
               onWithOptions
                 "click"
