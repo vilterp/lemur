@@ -47,13 +47,13 @@ makeViewModel state =
           in  { mod = mod
               , currentName = attrs.name
               , currentGraph =
-                    mod.userFuncs
+                    mod.graphFuncs
                       |> D.get attrs.name
-                      |> getMaybeOrCrash "no such user func"
+                      |> getMaybeOrCrash "no such graph func"
                       |> (\func ->
                         case func of
-                          UserFunc attrs -> attrs.graph
-                          _ -> Debug.crash "only expected UserFuncs")
+                          GraphFunc attrs -> attrs.graph
+                          _ -> Debug.crash "only expected graphFuncs")
               , collageLoc = state.collageLoc
               , editorState = attrs.editorState
               , mode =
@@ -136,14 +136,14 @@ lambdaState viewModel nodePath =
 updateGraphFun : (Graph -> Result String Graph) -> GraphViewModel -> GraphViewModel
 updateGraphFun updateFun viewModel =
     let newGraph = updateFun viewModel.currentGraph |> getOrCrash
-        newUdf = UserFunc { name = viewModel.currentName
+        newUdf = GraphFunc { name = viewModel.currentName
                           , graph = newGraph
                           }
-        newUserFuncs =
-            viewModel.mod.userFuncs
+        newgraphFuncs =
+            viewModel.mod.graphFuncs
               |> D.insert viewModel.currentName newUdf
         currentMod = viewModel.mod
-        newModule = { currentMod | userFuncs = newUserFuncs }
+        newModule = { currentMod | graphFuncs = newgraphFuncs }
     in { viewModel | currentGraph = newGraph
                    , mod = newModule }
 

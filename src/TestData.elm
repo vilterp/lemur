@@ -130,25 +130,25 @@ helloMap =
                             }
               )
             ]
-    , userFuncs =
+    , graphFuncs =
         D.fromList
           [ ("main"
-            , UserFunc { name = "main"
+            , GraphFunc { name = "main"
                        , graph = testGraph
                        }
             )
           , ("excl_and_hi"
-            , UserFunc { name = "excl_and_hi"
+            , GraphFunc { name = "excl_and_hi"
                        , graph = emptyGraph
                        }
             )
           , ("word_count"
-            , UserFunc { name = "word_count"
+            , GraphFunc { name = "word_count"
                        , graph = emptyGraph
                        }
             )
           , ("word_count_test"
-            , UserFunc { name = "word_count_test"
+            , GraphFunc { name = "word_count_test"
                        , graph = emptyGraph
                        }
             )

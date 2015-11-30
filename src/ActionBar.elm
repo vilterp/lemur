@@ -49,12 +49,12 @@ runSection state =
     case state.viewState of
       ViewingGraph attrs ->
           -- function to do this should be in model somewhere
-          let graph = state.mod.userFuncs
+          let graph = state.mod.graphFuncs
                         |> D.get attrs.name
-                        |> getMaybeOrCrash "no such user func"
+                        |> getMaybeOrCrash "no such graph func"
                         |> (\func -> case func of
-                              UserFunc attrs -> attrs.graph
-                              _ -> Debug.crash "only expected user funcs here")
+                              GraphFunc attrs -> attrs.graph
+                              _ -> Debug.crash "only expected graph funcs here")
           in case attrs.mode of
             EditingMode ->
                 case freeInPorts state.mod graph [] of

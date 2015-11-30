@@ -50,7 +50,7 @@ update action state =
           , Effects.none
           )
 
-      OpenUDF funcName ->
+      OpenGraphFunc funcName ->
           ( { state | viewState =
                 ViewingGraph
                   { name = funcName
@@ -74,7 +74,7 @@ update action state =
             in
               { state | viewState =
                   ViewingGraph
-                    { name = run.userFuncName
+                    { name = run.graphFuncName
                     , editorState = GE.initState
                     , mode = ViewingRunMode runId
                     }
@@ -98,7 +98,7 @@ update action state =
             in
               { stateWithNewRun | viewState =
                   ViewingGraph
-                    { name = run.userFuncName
+                    { name = run.graphFuncName
                     , editorState = GE.initState
                     , mode = ViewingRunMode runId
                     }

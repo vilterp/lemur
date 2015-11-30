@@ -22,7 +22,7 @@ view addr state =
           --, input [ type' "text", id "search-bar" ] [] -- TODO search bar
           ]
           [ panelSection "Members" (
-                (state.mod.userFuncs |> D.toList)
+                (state.mod.graphFuncs |> D.toList)
                       ++ (state.mod.pythonFuncs |> D.toList)
                       |> L.map (modElementView addr)
                       |> ul [ class "module-elements" ]
@@ -49,7 +49,7 @@ modElementView addr (funcId, func) =
           , let
               action =
                 case func of
-                  Model.UserFunc attrs -> Model.OpenUDF funcId
+                  Model.GraphFunc attrs -> Model.OpenGraphFunc funcId
                   Model.PythonFunc attrs -> Model.OpenPythonFunc funcId
             in
               onWithOptions

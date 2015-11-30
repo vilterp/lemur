@@ -53,7 +53,7 @@ Need to be able to do three things:
 type Action
     -- editor stuff
     = FilterElemPanel String
-    | OpenUDF FuncName
+    | OpenGraphFunc FuncName
     | OpenPythonFunc FuncName
     | OpenRun RunId
     -- graph ops
@@ -104,13 +104,13 @@ type alias FuncId = FuncName -- someday: within a module
 type alias Module =
     { name : ModName
     , pythonFuncs : D.Dict String Func
-    , userFuncs : D.Dict String Func
+    , graphFuncs : D.Dict String Func
     }
 
 -- TODO: can't figure out rn how to use extensible records here
 type Func
     = PythonFunc PythonFuncAttrs
-    | UserFunc UserFuncAttrs
+    | GraphFunc GraphFuncAttrs
     -- TODO call this graph function
 
 type alias PythonFuncAttrs =
@@ -120,12 +120,12 @@ type alias PythonFuncAttrs =
     , pythonCode : String
     }
 
-type alias UserFuncAttrs =
+type alias GraphFuncAttrs =
     { name : String
     , graph : Graph
     }
 
--- TODO: user func args are computed from graph
+-- TODO: graph func args are computed from graph
 
 emptyPythonFunc : String -> Func
 emptyPythonFunc name =
@@ -135,9 +135,9 @@ emptyPythonFunc name =
                 , returnVals = ["result"]
                 }
 
-emptyUserFunc : FuncName -> Func
-emptyUserFunc name =
-    UserFunc { name = name
+emptyGraphFunc : FuncName -> Func
+emptyGraphFunc name =
+    GraphFunc { name = name
              , graph = emptyGraph
              }
 
@@ -145,7 +145,7 @@ emptyUserFunc name =
 funcName : Func -> FuncName
 funcName func =
     case func of
-      UserFunc attrs -> attrs.name
+      GraphFunc attrs -> attrs.name
       PythonFunc attrs -> attrs.name
 
 -- assumes no duplicate names
@@ -153,7 +153,7 @@ getFunc : Module -> FuncName -> Maybe Func
 getFunc mod name =
     case D.get name mod.pythonFuncs of
       Just bif -> Just bif
-      Nothing -> D.get name mod.userFuncs
+      Nothing -> D.get name mod.graphFuncs
 
 getFuncOrCrash : Module -> FuncName -> Func
 getFuncOrCrash mod funcName =
@@ -251,7 +251,7 @@ type Tag
 
 type alias RunId = Int
 type alias Run =
-    { userFuncName : FuncName
+    { graphFuncName : FuncName
     , mod : Module
     , callTree : Runtime.Model.CallTree
     }
@@ -259,7 +259,7 @@ type alias Run =
 addNewRun : FuncName -> State -> State
 addNewRun funcName state =
     let rid = state.nextRunId
-        newRun = { userFuncName = funcName
+        newRun = { graphFuncName = funcName
                  , mod = state.mod
                  , callTree = Runtime.Model.emptyCallTree
                  }

@@ -107,7 +107,7 @@ nodeToStmt mod graph (nodePath, node) =
       LambdaNode attrs ->
           -- TODO: 4 real
           -- first basic, then closures
-          -- TODO: factor out common stuff w/ userFuncToAst
+          -- TODO: factor out common stuff w/ graphFuncToAst
           let subGraph =
                 { nodes = attrs.nodes
                 , edges = Debug.log "subgraphEdges" (graph.edges
@@ -146,13 +146,13 @@ makeReturnStmt mod graph nodePath =
       |> AST.Return
 
 -- TODO: this will always be a FuncDef, not just any statement
-userFuncToAst : Module -> UserFuncAttrs -> AST.Statement
-userFuncToAst mod userFunc =
-    let bodyStmts = topSort userFunc.graph
-                      |> L.concatMap (nodeToStmt mod userFunc.graph)
-        returnStmt = makeReturnStmt mod userFunc.graph []
-    in AST.FuncDef { name = userFunc.name
-                   , args = freeInPorts mod userFunc.graph []
+graphFuncToAst : Module -> GraphFuncAttrs -> AST.Statement
+graphFuncToAst mod graphFunc =
+    let bodyStmts = topSort graphFunc.graph
+                      |> L.concatMap (nodeToStmt mod graphFunc.graph)
+        returnStmt = makeReturnStmt mod graphFunc.graph []
+    in AST.FuncDef { name = graphFunc.name
+                   , args = freeInPorts mod graphFunc.graph []
                               |> L.map inPortToString
                    , body = bodyStmts ++ [returnStmt]
                    }
@@ -166,14 +166,14 @@ funcToString mod func =
          in PrettyPrint.headerBlock heading
               [PrettyPrint.preIndented attrs.pythonCode]
             |> PrettyPrint.stringify
-     Model.UserFunc attrs ->
-         userFuncToAst mod attrs
+     Model.GraphFunc attrs ->
+         graphFuncToAst mod attrs
            |> AST.statementToPython
 
 moduleToPython : FuncName -> Module -> String
 moduleToPython mainFunc mod =
     let funcStrings =
-          D.union mod.userFuncs mod.pythonFuncs
+          D.union mod.graphFuncs mod.pythonFuncs
             |> D.toList
             |> L.map (funcToString mod << snd)
         importStmt = AST.ImportAll ["log_call"]

@@ -43,13 +43,13 @@ icon bgColor letterColor letter =
       `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid bgColor)
 
 udfIcon = icon Color.lightBlue Color.black 'G' -- graph
-pythonIcon = icon Color.yellow Color.black 'T' -- text
+pythonIcon = icon Color.yellow Color.black 'P' -- python
 runIcon = icon Color.brown Color.white 'R'
 
 elementIcon : Model.Func -> Html
 elementIcon func =
     let curIcon = case func of
-                    Model.UserFunc _ -> udfIcon
+                    Model.GraphFunc _ -> udfIcon
                     Model.PythonFunc _ -> pythonIcon
     in curIcon |> asHtml
 
@@ -77,7 +77,7 @@ panelSection name contents =
 runLabel : (Model.RunId, Model.Run) -> String
 runLabel (runId, run) =
     "#" ++ toString runId ++ ": "
-      ++ run.userFuncName
+      ++ run.graphFuncName
       ++ (if Runtime.Model.isDone run.callTree then " (done)" else "")
 
 -- tooltip

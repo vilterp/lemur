@@ -219,7 +219,7 @@ funcParams : Module -> Func -> List String
 funcParams mod func =
     case func of
       PythonFunc attrs -> attrs.params
-      UserFunc attrs ->
+      GraphFunc attrs ->
           freeInPorts mod attrs.graph []
             |> L.map inPortToString
 
@@ -227,7 +227,7 @@ funcReturnVals : Module -> Func -> List String
 funcReturnVals mod func =
     case func of
       PythonFunc attrs -> attrs.returnVals
-      UserFunc attrs ->
+      GraphFunc attrs ->
           freeOutPorts mod attrs.graph []
             |> L.map outPortToString
 
