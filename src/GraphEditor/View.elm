@@ -10,6 +10,7 @@ import Maybe as M
 import Debug
 
 import Diagrams.Core exposing (..)
+import Diagrams.Type exposing (..)
 import Diagrams.Align exposing (..)
 import Diagrams.Pad exposing (..)
 import Diagrams.Geom exposing (..)

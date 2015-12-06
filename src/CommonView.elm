@@ -8,6 +8,7 @@ import Color
 import String
 
 import Diagrams.Core as DC
+import Diagrams.Type as DT
 import Diagrams.FillStroke as DFS
 import Diagrams.Align as DA
 import Diagrams.Envelope as DE
@@ -37,7 +38,7 @@ scrollPanel header_elems child_elems =
             ]
         ]
 
-icon : Color.Color -> Color.Color -> Char -> DC.Diagram t a
+icon : Color.Color -> Color.Color -> Char -> DT.Diagram t a
 icon bgColor letterColor letter =
     (DC.text { defaultStyle | color = letterColor } (String.fromChar letter))
       `DA.atop` (DC.circle 10 <| DFS.justFill <| DFS.Solid bgColor)
@@ -53,7 +54,7 @@ elementIcon func =
                     Model.PythonFunc _ -> pythonIcon
     in curIcon |> asHtml
 
-asHtml : DC.Diagram t a -> Html.Html
+asHtml : DT.Diagram t a -> Html.Html
 asHtml dia =
     [DC.render dia]
       |> C.collage (round <| DE.width dia) (round <| DE.height dia)
@@ -97,7 +98,7 @@ defaultTooltipSettings =
     , diaSpacing = 3
     }
 
-tooltip : TooltipSettings -> DC.Diagram t a -> DC.Diagram t a
+tooltip : TooltipSettings -> DT.Diagram t a -> DT.Diagram t a
 tooltip settings dia =
     let mainBox = DP.background settings.background (dia |> DP.pad settings.diaSpacing)
         triangle = DC.eqTriangle 7 settings.background

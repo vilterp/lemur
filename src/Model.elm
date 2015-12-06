@@ -11,6 +11,7 @@ import Debug
 import Diagrams.Geom exposing (Point, Dims)
 import Diagrams.Wiring exposing (CollageLocation, PrimMouseEvent)
 import Diagrams.Core as DC
+import Diagrams.Type as DT
 import Diagrams.Interact as DI
 import Http
 
@@ -220,7 +221,7 @@ type alias CodeReq =
 -- GRAPH EDITOR (TODO: figure out how to move this to its own module)
 
 type alias GraphEditorState =
-    { diagram : DC.Diagram Tag GraphEditorAction
+    { diagram : DT.Diagram Tag GraphEditorAction
     , mouseState : DI.MouseState Tag GraphEditorAction
     , mouseInteractionState : Maybe MouseInteractionState
     , pan : Point
