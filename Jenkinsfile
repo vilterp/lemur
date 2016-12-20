@@ -1,5 +1,5 @@
 node {
   stage('Build') {
-    sh('docker build')
+    sh('make')
   }
 }
