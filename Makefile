@@ -10,7 +10,7 @@ deps:
 
 clean:
 	rm -rf elm-stuff
-	rm public/elm.js
+	rm -rf public/elm.js
 
 loc:
 	find src -regex ".*elm" | xargs wc -l
