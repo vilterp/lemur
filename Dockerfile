@@ -1,6 +1,6 @@
 FROM node:latest
 
-RUN npm install -g elm
+RUN npm install -g elm@0.16.0
 
 ADD . lemur
 WORKDIR lemur
